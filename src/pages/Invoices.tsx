@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Eye, Trash2, FileText } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, FileText, Printer } from 'lucide-react';
+import InvoicePrintTemplate from '@/components/InvoicePrintTemplate';
 
 interface Invoice {
   id: string;
@@ -78,6 +80,9 @@ export default function Invoices({ type }: InvoicesPageProps) {
     { description: '', quantity: 1, unit_price: 0, total: 0 },
   ]);
 
+  const [includeTax, setIncludeTax] = useState(true);
+  const printRef = useRef<HTMLDivElement>(null);
+
   const TAX_RATE = 0.15; // 15% VAT
 
   useEffect(() => {
@@ -110,9 +115,9 @@ export default function Invoices({ type }: InvoicesPageProps) {
     return `${prefix}-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}-${timestamp}`;
   };
 
-  const calculateTotals = () => {
+  const calculateTotals = (withTax: boolean = includeTax) => {
     const amount = items.reduce((sum, item) => sum + item.total, 0);
-    const tax_amount = amount * TAX_RATE;
+    const tax_amount = withTax ? amount * TAX_RATE : 0;
     const total_amount = amount + tax_amount;
     return { amount, tax_amount, total_amount };
   };
@@ -147,7 +152,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
       return;
     }
 
-    const { amount, tax_amount, total_amount } = calculateTotals();
+    const { amount, tax_amount, total_amount } = calculateTotals(includeTax);
     const invoice_number = generateInvoiceNumber();
 
     const selectedClient = clients.find((c) => c.id === formData.client_id);
@@ -235,7 +240,42 @@ export default function Invoices({ type }: InvoicesPageProps) {
   const resetForm = () => {
     setFormData({ client_id: '', client_name: '', notes: '', status: 'pending' });
     setItems([{ description: '', quantity: 1, unit_price: 0, total: 0 }]);
+    setIncludeTax(true);
     setDialogOpen(false);
+  };
+
+  const handlePrint = () => {
+    const printContent = printRef.current;
+    if (!printContent) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>طباعة فاتورة - ${selectedInvoice?.invoice_number}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            @media print {
+              body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
   const formatCurrency = (amount: number) => {
@@ -352,15 +392,29 @@ export default function Invoices({ type }: InvoicesPageProps) {
                 </Button>
               </div>
 
+              {/* Tax Toggle */}
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="include-tax" className="font-medium">تضمين ضريبة القيمة المضافة (15%)</Label>
+                </div>
+                <Switch
+                  id="include-tax"
+                  checked={includeTax}
+                  onCheckedChange={setIncludeTax}
+                />
+              </div>
+
               <div className="bg-muted p-4 rounded-lg space-y-2">
                 <div className="flex justify-between">
                   <span>المجموع قبل الضريبة:</span>
                   <span>{formatCurrency(amount)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>ضريبة القيمة المضافة (15%):</span>
-                  <span>{formatCurrency(tax_amount)}</span>
-                </div>
+                {includeTax && (
+                  <div className="flex justify-between text-primary">
+                    <span>ضريبة القيمة المضافة (15%):</span>
+                    <span>{formatCurrency(tax_amount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>الإجمالي:</span>
                   <span>{formatCurrency(total_amount)}</span>
@@ -501,44 +555,63 @@ export default function Invoices({ type }: InvoicesPageProps) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+                </div>
 
-              <div className="bg-muted p-4 rounded-lg space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>المجموع:</span>
-                  <span>{formatCurrency(Number(selectedInvoice.amount))}</span>
+                <div className="bg-muted p-4 rounded-lg space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>المجموع:</span>
+                    <span>{formatCurrency(Number(selectedInvoice.amount))}</span>
+                  </div>
+                  {Number(selectedInvoice.tax_amount) > 0 && (
+                    <div className="flex justify-between">
+                      <span>الضريبة (15%):</span>
+                      <span>{formatCurrency(Number(selectedInvoice.tax_amount))}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-base border-t pt-2">
+                    <span>الإجمالي:</span>
+                    <span>{formatCurrency(Number(selectedInvoice.total_amount))}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>الضريبة:</span>
-                  <span>{formatCurrency(Number(selectedInvoice.tax_amount))}</span>
-                </div>
-                <div className="flex justify-between font-bold text-base border-t pt-2">
-                  <span>الإجمالي:</span>
-                  <span>{formatCurrency(Number(selectedInvoice.total_amount))}</span>
-                </div>
-              </div>
 
-              <div className="flex gap-2">
-                <Button
-                  className="flex-1"
-                  variant={selectedInvoice.status === 'paid' ? 'secondary' : 'default'}
-                  onClick={() => handleUpdateStatus(selectedInvoice.id, 'paid')}
-                  disabled={selectedInvoice.status === 'paid'}
-                >
-                  تحديد كمدفوعة
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
-                  disabled={selectedInvoice.status === 'cancelled'}
-                >
-                  إلغاء
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 gap-2"
+                    onClick={handlePrint}
+                  >
+                    <Printer className="w-4 h-4" />
+                    طباعة الفاتورة
+                  </Button>
+                  <Button
+                    variant={selectedInvoice.status === 'paid' ? 'secondary' : 'outline'}
+                    onClick={() => handleUpdateStatus(selectedInvoice.id, 'paid')}
+                    disabled={selectedInvoice.status === 'paid'}
+                  >
+                    تحديد كمدفوعة
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
+                    disabled={selectedInvoice.status === 'cancelled'}
+                  >
+                    إلغاء
+                  </Button>
+                </div>
               </div>
+            )}
+
+            {/* Hidden Print Template */}
+            <div className="hidden">
+              {selectedInvoice && (
+                <InvoicePrintTemplate
+                  ref={printRef}
+                  invoice={selectedInvoice}
+                  items={selectedInvoiceItems}
+                />
+              )}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }

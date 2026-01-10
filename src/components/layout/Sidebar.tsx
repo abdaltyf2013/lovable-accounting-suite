@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   Trophy,
-  History
+  History,
+  ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { title: 'التقارير', href: '/reports', icon: BarChart3, adminOnly: true },
   { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, adminOnly: true },
   { title: 'سجل التصفيات', href: '/settlements', icon: History },
+  { title: 'سجل الرقابة', href: '/audit-log', icon: ShieldCheck, adminOnly: true },
 ];
 
 export default function Sidebar() {

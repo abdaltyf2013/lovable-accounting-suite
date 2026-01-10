@@ -15,7 +15,8 @@ const AccountantsRanking = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select("accountant_name, total_amount");
+        .select("accountant_name, total_amount, type")
+        .eq("type", "sales"); // الاعتماد على المبيعات فقط
 
       if (error) throw error;
 

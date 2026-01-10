@@ -52,66 +52,71 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
     return (
       <div
         ref={ref}
-        className="bg-white text-black p-4 mx-auto print:p-0"
+        className="bg-white text-black mx-auto"
         style={{ 
-          width: '148mm', 
-          minHeight: '210mm',
+          width: '210mm', // عرض A4
+          minHeight: '297mm', // طول A4
           fontFamily: 'Arial, sans-serif',
-          direction: 'rtl'
+          direction: 'rtl',
+          padding: '15mm'
         }}
       >
         <style dangerouslySetInnerHTML={{ __html: `
           @page {
-            size: A5;
-            margin: 5mm;
+            size: A4;
+            margin: 0;
           }
           @media print {
             body {
               -webkit-print-color-adjust: exact;
+              margin: 0;
+              padding: 0;
             }
             .print-container {
-              width: 148mm !important;
-              height: 210mm !important;
-              padding: 5mm !important;
+              width: 210mm !important;
+              height: 297mm !important;
+              margin: 0 !important;
+              padding: 15mm !important;
+              border: none !important;
             }
           }
         `}} />
         
-        <div className="print-container border-2 border-gray-200 p-4 rounded-lg h-full flex flex-col">
+        <div className="print-container flex flex-col h-full">
           {/* Header */}
-          <div className="flex justify-between items-start mb-6 border-b-2 border-primary pb-4">
+          <div className="flex justify-between items-center mb-10 border-b-8 border-gray-900 pb-6">
             <div>
-              <h1 className="text-2xl font-bold text-primary mb-1">
+              <h1 className="text-5xl font-black text-gray-900 mb-2">
                 {invoice.type === 'sales' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}
               </h1>
-              <p className="text-sm text-gray-600">مؤسسة سمو الأمجاد للتجارة</p>
+              <p className="text-2xl font-bold text-gray-700">مؤسسة سمو الأمجاد للتجارة</p>
             </div>
-            <div className="text-left">
-              <div className="text-sm font-bold">رقم الفاتورة:</div>
-              <div className="text-lg font-mono text-primary">{invoice.invoice_number}</div>
+            <div className="text-left bg-gray-100 p-6 rounded-2xl border-2 border-gray-200">
+              <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">رقم الفاتورة</div>
+              <div className="text-4xl font-black text-gray-900 font-mono">{invoice.invoice_number}</div>
             </div>
           </div>
 
           {/* Info Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
-            <div className="space-y-1">
-              <div className="flex gap-2">
-                <span className="font-bold text-gray-700">التاريخ:</span>
-                <span>{formatDate(invoice.created_at)}</span>
+          <div className="grid grid-cols-2 gap-10 mb-12 bg-gray-50 p-8 rounded-3xl border-2 border-gray-100">
+            <div className="space-y-4">
+              <div className="flex flex-col">
+                <span className="text-sm text-gray-500 font-bold mb-1">تاريخ الإصدار</span>
+                <span className="text-2xl font-bold text-gray-900">{formatDate(invoice.created_at)}</span>
               </div>
-              <div className="flex gap-2">
-                <span className="font-bold text-gray-700">العميل:</span>
-                <span>{invoice.client_name}</span>
+              <div className="flex flex-col">
+                <span className="text-sm text-gray-500 font-bold mb-1">العميل</span>
+                <span className="text-3xl font-black text-gray-900">{invoice.client_name}</span>
               </div>
             </div>
-            <div className="space-y-1 text-left">
-              <div className="flex justify-end gap-2">
-                <span className="font-bold text-gray-700">المحاسب:</span>
-                <span>{invoice.accountant_name || '-'}</span>
+            <div className="space-y-4 text-left">
+              <div className="flex flex-col items-end">
+                <span className="text-sm text-gray-500 font-bold mb-1">المحاسب</span>
+                <span className="text-2xl font-bold text-gray-900">{invoice.accountant_name || '-'}</span>
               </div>
-              <div className="flex justify-end gap-2">
-                <span className="font-bold text-gray-700">الحالة:</span>
-                <span className={invoice.status === 'paid' ? 'text-green-600 font-bold' : 'text-orange-600 font-bold'}>
+              <div className="flex flex-col items-end">
+                <span className="text-sm text-gray-500 font-bold mb-1">حالة الفاتورة</span>
+                <span className={`text-xl font-black px-6 py-2 rounded-full ${invoice.status === 'paid' ? 'bg-green-600 text-white' : 'bg-orange-500 text-white'}`}>
                   {invoice.status === 'paid' ? 'مدفوعة' : 'معلقة'}
                 </span>
               </div>
@@ -119,23 +124,23 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
           </div>
 
           {/* Items Table */}
-          <div className="flex-grow">
-            <table className="w-full text-sm border-collapse">
+          <div className="flex-grow mb-12">
+            <table className="w-full text-xl border-collapse shadow-sm">
               <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-300 p-2 text-right">الوصف</th>
-                  <th className="border border-gray-300 p-2 text-center w-16">الكمية</th>
-                  <th className="border border-gray-300 p-2 text-center w-24">السعر</th>
-                  <th className="border border-gray-300 p-2 text-center w-24">المجموع</th>
+                <tr className="bg-gray-900 text-white">
+                  <th className="border-4 border-gray-900 p-5 text-right rounded-tr-2xl">الوصف</th>
+                  <th className="border-4 border-gray-900 p-5 text-center w-24">الكمية</th>
+                  <th className="border-4 border-gray-900 p-5 text-center w-40">السعر</th>
+                  <th className="border-4 border-gray-900 p-5 text-center w-40 rounded-tl-2xl">المجموع</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, index) => (
-                  <tr key={index}>
-                    <td className="border border-gray-300 p-2">{item.description}</td>
-                    <td className="border border-gray-300 p-2 text-center">{item.quantity}</td>
-                    <td className="border border-gray-300 p-2 text-center">{Number(item.unit_price).toFixed(2)}</td>
-                    <td className="border border-gray-300 p-2 text-center font-bold">{Number(item.total).toFixed(2)}</td>
+                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="border-2 border-gray-200 p-5 font-bold text-gray-800">{item.description}</td>
+                    <td className="border-2 border-gray-200 p-5 text-center font-bold">{item.quantity}</td>
+                    <td className="border-2 border-gray-200 p-5 text-center font-bold">{Number(item.unit_price).toFixed(2)}</td>
+                    <td className="border-2 border-gray-200 p-5 text-center font-black text-gray-900">{Number(item.total).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -143,30 +148,36 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
           </div>
 
           {/* Totals */}
-          <div className="mt-4 flex justify-end">
-            <div className="w-64 space-y-1 text-sm">
-              <div className="flex justify-between p-1 border-b">
-                <span>المجموع الفرعي:</span>
-                <span>{formatCurrency(Number(invoice.amount))}</span>
+          <div className="flex justify-end mb-16">
+            <div className="w-full max-w-md space-y-4">
+              <div className="flex justify-between p-3 border-b-4 border-gray-100">
+                <span className="text-xl text-gray-600 font-bold">المجموع الفرعي</span>
+                <span className="text-xl font-bold text-gray-900">{formatCurrency(Number(invoice.amount))}</span>
               </div>
               {Number(invoice.tax_amount) > 0 && (
-                <div className="flex justify-between p-1 border-b">
-                  <span>الضريبة (15%):</span>
-                  <span>{formatCurrency(Number(invoice.tax_amount))}</span>
+                <div className="flex justify-between p-3 border-b-4 border-gray-100">
+                  <span className="text-xl text-gray-600 font-bold">الضريبة (15%)</span>
+                  <span className="text-xl font-bold text-gray-900">{formatCurrency(Number(invoice.tax_amount))}</span>
                 </div>
               )}
 
-              <div className="flex justify-between p-2 bg-gray-900 text-white rounded mt-2">
-                <span className="font-bold">الإجمالي النهائي:</span>
-                <span className="font-bold">{formatCurrency(Number(invoice.total_amount))}</span>
+              <div className="flex justify-between p-8 bg-gray-900 text-white rounded-3xl shadow-2xl mt-6">
+                <span className="text-3xl font-black">الإجمالي النهائي</span>
+                <span className="text-5xl font-black">{formatCurrency(Number(invoice.total_amount))}</span>
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="mt-8 pt-4 border-t border-gray-200 text-center">
-            <p className="text-xs text-gray-500 mb-1">شكراً لتعاملكم معنا</p>
-            <p className="text-[10px] text-gray-400">تاريخ الطباعة: {printDate}</p>
+          <div className="mt-auto pt-12 border-t-4 border-gray-100 text-center">
+            <div className="inline-block bg-gray-900 text-white px-12 py-4 rounded-full mb-6 shadow-lg">
+              <p className="text-2xl font-black">شكراً لتعاملكم معنا</p>
+            </div>
+            <div className="flex justify-center gap-12 text-sm text-gray-400 font-bold uppercase tracking-widest">
+              <span>تاريخ الطباعة: {printDate}</span>
+              <span>•</span>
+              <span>نظام رام ستور المحاسبي</span>
+            </div>
           </div>
         </div>
       </div>

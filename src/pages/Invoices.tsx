@@ -617,38 +617,8 @@ export default function Invoices({ type }: InvoicesPageProps) {
                 <Button
                   variant="outline"
                   className="flex-1 gap-2 h-12 text-lg font-bold border-2 hover:bg-primary hover:text-white transition-all"
-                  onClick={async () => {
-                    const element = document.getElementById('invoice-content');
-                    if (!element) return;
-                    
-                    try {
-                      toast({ title: 'جاري التحميل', description: 'يتم الآن تجهيز ملف PDF...' });
-                      
-                      // @ts-ignore
-                      const canvas = await html2canvas(element, {
-                        scale: 2,
-                        useCORS: true,
-                        logging: false,
-                        backgroundColor: '#ffffff'
-                      });
-                      
-                      const imgData = canvas.toDataURL('image/png');
-                      // @ts-ignore
-                      const { jsPDF } = window.jspdf;
-                      const pdf = new jsPDF('p', 'mm', 'a4');
-                      
-                      const imgProps = pdf.getImageProperties(imgData);
-                      const pdfWidth = pdf.internal.pageSize.getWidth();
-                      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                      
-                      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                      pdf.save(`فاتورة-${selectedInvoice.invoice_number}.pdf`);
-                      
-                      toast({ title: 'تم التحميل', description: 'تم حفظ الفاتورة بنجاح' });
-                    } catch (error) {
-                      console.error('PDF Error:', error);
-                      toast({ title: 'خطأ', description: 'فشل في تحميل ملف PDF، يرجى تجربة الطباعة العادية', variant: 'destructive' });
-                    }
+                  onClick={() => {
+                    window.print();
                   }}
                 >
                   <Printer className="w-5 h-5" />

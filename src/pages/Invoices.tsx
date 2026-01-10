@@ -189,9 +189,10 @@ export default function Invoices({ type }: InvoicesPageProps) {
       .single();
 
     if (invoiceError) {
+      console.error('Invoice Error:', invoiceError);
       toast({
         title: 'خطأ',
-        description: 'حدث خطأ أثناء إنشاء الفاتورة',
+        description: `حدث خطأ أثناء إنشاء الفاتورة: ${invoiceError.message}`,
         variant: 'destructive',
       });
       return;
@@ -200,9 +201,9 @@ export default function Invoices({ type }: InvoicesPageProps) {
     const invoiceItems = items.map(item => ({
       invoice_id: invoice.id,
       description: item.description,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total: item.total,
+      quantity: Number(item.quantity) || 0,
+      unit_price: Number(item.unit_price) || 0,
+      total: Number(item.total) || 0,
     }));
 
     const { error: itemsError } = await supabase
@@ -210,9 +211,10 @@ export default function Invoices({ type }: InvoicesPageProps) {
       .insert(invoiceItems);
 
     if (itemsError) {
+      console.error('Items Error:', itemsError);
       toast({
         title: 'خطأ',
-        description: 'حدث خطأ أثناء إضافة بنود الفاتورة',
+        description: `حدث خطأ أثناء إضافة بنود الفاتورة: ${itemsError.message}`,
         variant: 'destructive',
       });
       return;

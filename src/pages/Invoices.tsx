@@ -484,10 +484,10 @@ export default function Invoices({ type }: InvoicesPageProps) {
                       invoice.status === 'paid'
                         ? 'bg-green-100 text-green-700'
                         : invoice.status === 'cancelled'
-                        ? 'bg-red-100 text-red-700'
+                        ? (invoice.notes?.includes('[SETTLED_') ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700')
                         : 'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {invoice.status === 'paid' ? 'مدفوعة' : invoice.status === 'cancelled' ? 'ملغاة' : 'معلقة'}
+                      {invoice.status === 'paid' ? 'مدفوعة' : (invoice.status === 'cancelled' && invoice.notes?.includes('[SETTLED_') ? 'تمت المحاسبة' : invoice.status === 'cancelled' ? 'ملغاة' : 'معلقة')}
                     </span>
                   </td>
                   <td className="py-3 px-4">

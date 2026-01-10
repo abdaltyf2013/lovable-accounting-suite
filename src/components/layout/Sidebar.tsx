@@ -16,10 +16,13 @@ import {
   X,
   Trophy,
   History,
-  ShieldCheck
+  ShieldCheck,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Switch } from '@/components/ui/switch';
+import { useState, useEffect } from 'react';
 
 interface NavItem {
   title: string;
@@ -45,6 +48,23 @@ export default function Sidebar() {
   const location = useLocation();
   const { profile, signOut, isAdmin } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    setIsDark(isDarkMode);
+  }, []);
+
+  const toggleTheme = (checked: boolean) => {
+    setIsDark(checked);
+    if (checked) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const filteredNavItems = navItems.filter(item => {
     if (item.adminOnly) return isAdmin;
@@ -98,6 +118,13 @@ export default function Sidebar() {
               {isAdmin ? 'مدير' : 'محاسب'}
             </p>
           </div>
+        </div>
+        <div className="flex items-center justify-between px-3 py-2 mb-2 bg-sidebar-accent/50 rounded-lg">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            {isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            <span>الوضع الليلي</span>
+          </div>
+          <Switch checked={isDark} onCheckedChange={toggleTheme} />
         </div>
         <Button
           variant="ghost"

@@ -14,7 +14,8 @@ import {
   UserCircle,
   Menu,
   X,
-  Trophy
+  Trophy,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -34,6 +35,7 @@ const navItems: NavItem[] = [
   { title: 'المحاسبين', href: '/accountants', icon: UserCircle, adminOnly: true },
   { title: 'التقارير', href: '/reports', icon: BarChart3, adminOnly: true },
   { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, adminOnly: true },
+  { title: 'سجل التصفيات', href: '/settlements', icon: History, adminOnly: true },
 ];
 
 export default function Sidebar() {

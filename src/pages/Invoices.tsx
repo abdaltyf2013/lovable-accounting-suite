@@ -511,7 +511,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>تفاصيل الفاتورة</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">تفاصيل الفاتورة</DialogTitle>
           </DialogHeader>
           {selectedInvoice && (
             <div className="space-y-4">
@@ -535,15 +535,16 @@ export default function Invoices({ type }: InvoicesPageProps) {
               </div>
 
               <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="text-right py-2 px-3">الوصف</th>
-                      <th className="text-right py-2 px-3">الكمية</th>
-                      <th className="text-right py-2 px-3">السعر</th>
-                      <th className="text-right py-2 px-3">المجموع</th>
-                    </tr>
-                  </thead>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[400px]">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-right py-2 px-3">الوصف</th>
+                        <th className="text-right py-2 px-3">الكمية</th>
+                        <th className="text-right py-2 px-3">السعر</th>
+                        <th className="text-right py-2 px-3">المجموع</th>
+                      </tr>
+                    </thead>
                   <tbody>
                     {selectedInvoiceItems.map((item, index) => (
                       <tr key={index} className="border-t">
@@ -554,8 +555,9 @@ export default function Invoices({ type }: InvoicesPageProps) {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                  </table>
                 </div>
+              </div>
 
                 <div className="bg-muted p-4 rounded-lg space-y-1 text-sm">
                   <div className="flex justify-between">
@@ -574,28 +576,32 @@ export default function Invoices({ type }: InvoicesPageProps) {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
-                    className="flex-1 gap-2"
+                    className="flex-1 gap-2 w-full"
                     onClick={handlePrint}
                   >
                     <Printer className="w-4 h-4" />
                     طباعة الفاتورة
                   </Button>
-                  <Button
-                    variant={selectedInvoice.status === 'paid' ? 'secondary' : 'outline'}
-                    onClick={() => handleUpdateStatus(selectedInvoice.id, 'paid')}
-                    disabled={selectedInvoice.status === 'paid'}
-                  >
-                    تحديد كمدفوعة
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
-                    disabled={selectedInvoice.status === 'cancelled'}
-                  >
-                    إلغاء الفاتورة
-                  </Button>
+                  <div className="flex gap-2 flex-1">
+                    <Button
+                      variant={selectedInvoice.status === 'paid' ? 'secondary' : 'outline'}
+                      className="flex-1"
+                      onClick={() => handleUpdateStatus(selectedInvoice.id, 'paid')}
+                      disabled={selectedInvoice.status === 'paid'}
+                    >
+                      تحديد كمدفوعة
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
+                      disabled={selectedInvoice.status === 'cancelled'}
+                    >
+                      إلغاء الفاتورة
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

@@ -143,17 +143,17 @@ const AccountantsRanking = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-6">
-              <div className="text-left">
-                <div className="text-sm text-muted-foreground">إجمالي المبيعات</div>
-                <div className="text-xl font-bold text-primary">
+            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 sm:gap-6 w-full sm:w-auto mt-4 sm:mt-0 border-t sm:border-none pt-4 sm:pt-0">
+              <div className="text-left w-full sm:w-auto">
+                <div className="text-xs sm:text-sm text-muted-foreground">إجمالي المبيعات</div>
+                <div className="text-lg sm:text-xl font-bold text-primary">
                   {accountant.total_amount.toLocaleString()} ر.س
                 </div>
               </div>
               <Button 
                 variant="outline" 
                 size="sm"
-                className="gap-2 border-green-200 hover:bg-green-50 hover:text-green-700"
+                className="gap-2 border-green-200 hover:bg-green-50 hover:text-green-700 w-full sm:w-auto"
                 onClick={() => handleSettlement(accountant.accountant_name, accountant.total_amount)}
               >
                 <CheckCircle2 className="w-4 h-4" />

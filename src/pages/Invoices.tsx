@@ -23,6 +23,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Eye, Trash2, FileText, Printer } from 'lucide-react';
+import InvoicePrintTemplate from '@/components/InvoicePrintTemplate';
 
 interface Invoice {
   id: string;
@@ -66,6 +67,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedInvoiceItems, setSelectedInvoiceItems] = useState<InvoiceItem[]>([]);
+  const printRef = useRef<HTMLDivElement>(null);
 
   const canEdit = (createdAt: string) => {
     if (isAdmin) return true;
@@ -246,6 +248,9 @@ export default function Invoices({ type }: InvoicesPageProps) {
     setSelectedInvoice(invoice);
     setSelectedInvoiceItems(data || []);
     setViewDialogOpen(true);
+    setTimeout(() => {
+      window.print();
+    }, 500);
   };
 
   const handleDelete = async (id: string) => {
@@ -558,46 +563,45 @@ export default function Invoices({ type }: InvoicesPageProps) {
             <DialogTitle>تفاصيل الفاتورة</DialogTitle>
           </DialogHeader>
           {selectedInvoice && (
-            <div className="space-y-6 print:space-y-0" id="invoice-content">
-              {/* قالب الفاتورة الاحترافي للطباعة */}
-              <div className="print:p-12 print:text-black print:bg-white min-h-full flex flex-col">
-                {/* الترويسة */}
-                <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-8">
-                  <div className="space-y-2">
-                    <h1 className="text-3xl font-bold text-gray-900">مؤسسة سمو الأمجاد للتجارة</h1>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>مكة المكرمة - حي الشرايع</p>
-                      <p>شارع محمد صالح باشراحيل</p>
-                    </div>
+            <div className="space-y-6 print:space-y-0">
+              {/* عرض المعاينة في المتصفح */}
+              <div className="print:hidden space-y-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                      {selectedInvoice.type === 'sales' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}
+                    </h2>
+                    <p className="text-gray-500 font-mono">{selectedInvoice.invoice_number}</p>
                   </div>
-                  <div className="text-left space-y-1">
-                    <h2 className="text-2xl font-bold text-gray-800">فاتورة {selectedInvoice.type === 'sales' ? 'مبيعات' : 'مشتريات'}</h2>
-                    <p className="text-sm font-mono bg-gray-100 px-2 py-1 rounded inline-block">{selectedInvoice.invoice_number}</p>
-                    <p className="text-sm text-gray-600">{new Date(selectedInvoice.created_at).toLocaleDateString('ar-SA')}</p>
+                  <div className="text-left">
+                    <p className="text-sm text-gray-500 mb-1">تاريخ الإصدار</p>
+                    <p className="font-bold">{new Date(selectedInvoice.created_at).toLocaleDateString('ar-SA')}</p>
                   </div>
                 </div>
 
-                {/* معلومات العميل والمحاسب */}
-                <div className="grid grid-cols-3 gap-4 mb-10 bg-gray-50 p-4 rounded-lg print:bg-gray-50">
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider">العميل</p>
-                    <p className="text-lg font-bold text-gray-900">{selectedInvoice.client_name}</p>
+                <div className="grid grid-cols-2 gap-8 p-6 bg-gray-50 rounded-xl border border-gray-100">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">معلومات العميل</p>
+                    <p className="text-xl font-bold text-gray-900">{selectedInvoice.client_name}</p>
                   </div>
-                  <div className="space-y-1 text-center">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider">طريقة الدفع</p>
-                    <p className="text-lg font-bold text-gray-900">{selectedInvoice.payment_method || 'كاش'}</p>
-                  </div>
-                  <div className="space-y-1 text-left">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider">المحاسب</p>
-                    <p className="text-lg font-bold text-gray-900">{selectedInvoice.accountant_name}</p>
+                  <div className="text-left">
+                    <p className="text-sm text-gray-500 mb-2">حالة الفاتورة</p>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
+                      selectedInvoice.status === 'paid' 
+                        ? 'bg-green-100 text-green-700' 
+                        : selectedInvoice.status === 'cancelled'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {selectedInvoice.status === 'paid' ? 'مدفوعة' : selectedInvoice.status === 'cancelled' ? 'ملغاة' : 'معلقة'}
+                    </span>
                   </div>
                 </div>
 
-                {/* جدول البنود */}
-                <div className="flex-grow mb-10">
-                  <table className="w-full text-sm border-collapse">
+                <div className="overflow-hidden border border-gray-200 rounded-xl">
+                  <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-800 text-white print:bg-gray-800 print:text-white">
+                      <tr className="bg-gray-900 text-white">
                         <th className="py-3 px-4 text-right rounded-tr-lg">الوصف</th>
                         <th className="py-3 px-4 text-center">الكمية</th>
                         <th className="py-3 px-4 text-center">السعر</th>
@@ -617,8 +621,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
                   </table>
                 </div>
 
-                {/* ملخص الحساب */}
-                <div className="flex justify-end mb-12">
+                <div className="flex justify-end">
                   <div className="w-full max-w-xs space-y-3">
                     <div className="flex justify-between text-gray-600">
                       <span>المجموع الفرعي:</span>
@@ -640,17 +643,15 @@ export default function Invoices({ type }: InvoicesPageProps) {
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* التذييل والكلمة الطيبة */}
-                <div className="mt-auto pt-10 border-t border-gray-200 text-center space-y-4">
-                  <div className="bg-gray-900 text-white py-4 px-8 rounded-full inline-block print:bg-gray-900 print:text-white">
-                    <p className="text-xl font-bold">شكراً لثقتكم بنا، نسعد بخدمتكم دائماً</p>
-                  </div>
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <p>مؤسسة سمو الأمجاد للتجارة</p>
-                    <p>مكة المكرمة - حي الشرايع - شارع محمد صالح باشراحيل</p>
-                  </div>
-                </div>
+              {/* قالب الطباعة الفعلي الذي يظهر فقط عند الطباعة */}
+              <div className="hidden print:block">
+                <InvoicePrintTemplate 
+                  ref={printRef} 
+                  invoice={selectedInvoice} 
+                  items={selectedInvoiceItems} 
+                />
               </div>
 
               {/* أزرار التحكم - تختفي عند الطباعة */}

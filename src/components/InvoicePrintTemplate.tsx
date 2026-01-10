@@ -15,6 +15,7 @@ interface Invoice {
   amount: number;
   tax_amount: number;
   total_amount: number;
+  shipping_fee: number;
   status: string;
   notes: string | null;
   accountant_name: string | null;
@@ -51,112 +52,127 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
     return (
       <div
         ref={ref}
-        className="bg-white text-black p-8 min-h-[297mm] w-[210mm] mx-auto"
-        style={{ fontFamily: 'Arial, sans-serif' }}
-        dir="rtl"
+        className="bg-white text-black p-4 mx-auto print:p-0"
+        style={{ 
+          width: '148mm', 
+          minHeight: '210mm',
+          fontFamily: 'Arial, sans-serif',
+          direction: 'rtl'
+        }}
       >
-        {/* Header */}
-        <div className="text-center mb-8 border-b-2 border-gray-800 pb-6">
-          <h1 className="text-3xl font-bold mb-2">
-            {invoice.type === 'sales' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}
-          </h1>
-          <p className="text-lg text-gray-600">نظام الفواتير المحاسبية</p>
-        </div>
-
-        {/* Invoice Info */}
-        <div className="grid grid-cols-2 gap-8 mb-8">
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <span className="font-bold">رقم الفاتورة:</span>
-              <span className="font-mono">{invoice.invoice_number}</span>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @page {
+            size: A5;
+            margin: 5mm;
+          }
+          @media print {
+            body {
+              -webkit-print-color-adjust: exact;
+            }
+            .print-container {
+              width: 148mm !important;
+              height: 210mm !important;
+              padding: 5mm !important;
+            }
+          }
+        `}} />
+        
+        <div className="print-container border-2 border-gray-200 p-4 rounded-lg h-full flex flex-col">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-6 border-b-2 border-primary pb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-primary mb-1">
+                {invoice.type === 'sales' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}
+              </h1>
+              <p className="text-sm text-gray-600">مؤسسة سمو الأمجاد للتجارة</p>
             </div>
-            <div className="flex gap-2">
-              <span className="font-bold">تاريخ الإصدار:</span>
-              <span>{formatDate(invoice.created_at)}</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="font-bold">الحالة:</span>
-              <span className={`px-2 py-0.5 rounded ${
-                invoice.status === 'paid' 
-                  ? 'bg-green-100 text-green-800' 
-                  : invoice.status === 'cancelled'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-yellow-100 text-yellow-800'
-              }`}>
-                {invoice.status === 'paid' ? 'مدفوعة' : invoice.status === 'cancelled' ? 'ملغاة' : 'معلقة'}
-              </span>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <span className="font-bold">العميل:</span>
-              <span>{invoice.client_name}</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="font-bold">المحاسب:</span>
-              <span>{invoice.accountant_name || '-'}</span>
+            <div className="text-left">
+              <div className="text-sm font-bold">رقم الفاتورة:</div>
+              <div className="text-lg font-mono text-primary">{invoice.invoice_number}</div>
             </div>
           </div>
-        </div>
 
-        {/* Items Table */}
-        <div className="mb-8">
-          <table className="w-full border-collapse border border-gray-400">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="border border-gray-400 py-3 px-4 text-right font-bold">#</th>
-                <th className="border border-gray-400 py-3 px-4 text-right font-bold">الوصف</th>
-                <th className="border border-gray-400 py-3 px-4 text-right font-bold">الكمية</th>
-                <th className="border border-gray-400 py-3 px-4 text-right font-bold">سعر الوحدة</th>
-                <th className="border border-gray-400 py-3 px-4 text-right font-bold">المجموع</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => (
-                <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="border border-gray-400 py-2 px-4">{index + 1}</td>
-                  <td className="border border-gray-400 py-2 px-4">{item.description}</td>
-                  <td className="border border-gray-400 py-2 px-4">{item.quantity}</td>
-                  <td className="border border-gray-400 py-2 px-4">{formatCurrency(Number(item.unit_price))}</td>
-                  <td className="border border-gray-400 py-2 px-4">{formatCurrency(Number(item.total))}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Totals */}
-        <div className="flex justify-end mb-8">
-          <div className="w-80 border border-gray-400 rounded-lg overflow-hidden">
-            <div className="flex justify-between py-3 px-4 border-b border-gray-400">
-              <span className="font-bold">المجموع الفرعي:</span>
-              <span>{formatCurrency(Number(invoice.amount))}</span>
-            </div>
-            {Number(invoice.tax_amount) > 0 && (
-              <div className="flex justify-between py-3 px-4 border-b border-gray-400">
-                <span className="font-bold">ضريبة القيمة المضافة (15%):</span>
-                <span>{formatCurrency(Number(invoice.tax_amount))}</span>
+          {/* Info Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+            <div className="space-y-1">
+              <div className="flex gap-2">
+                <span className="font-bold text-gray-700">التاريخ:</span>
+                <span>{formatDate(invoice.created_at)}</span>
               </div>
-            )}
-            <div className="flex justify-between py-4 px-4 bg-gray-800 text-white">
-              <span className="font-bold text-lg">الإجمالي:</span>
-              <span className="font-bold text-lg">{formatCurrency(Number(invoice.total_amount))}</span>
+              <div className="flex gap-2">
+                <span className="font-bold text-gray-700">العميل:</span>
+                <span>{invoice.client_name}</span>
+              </div>
+            </div>
+            <div className="space-y-1 text-left">
+              <div className="flex justify-end gap-2">
+                <span className="font-bold text-gray-700">المحاسب:</span>
+                <span>{invoice.accountant_name || '-'}</span>
+              </div>
+              <div className="flex justify-end gap-2">
+                <span className="font-bold text-gray-700">الحالة:</span>
+                <span className={invoice.status === 'paid' ? 'text-green-600 font-bold' : 'text-orange-600 font-bold'}>
+                  {invoice.status === 'paid' ? 'مدفوعة' : 'معلقة'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Notes */}
-        {invoice.notes && (
-          <div className="mb-8 p-4 bg-gray-100 rounded-lg">
-            <span className="font-bold">ملاحظات:</span>
-            <p className="mt-2">{invoice.notes}</p>
+          {/* Items Table */}
+          <div className="flex-grow">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 p-2 text-right">الوصف</th>
+                  <th className="border border-gray-300 p-2 text-center w-16">الكمية</th>
+                  <th className="border border-gray-300 p-2 text-center w-24">السعر</th>
+                  <th className="border border-gray-300 p-2 text-center w-24">المجموع</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => (
+                  <tr key={index}>
+                    <td className="border border-gray-300 p-2">{item.description}</td>
+                    <td className="border border-gray-300 p-2 text-center">{item.quantity}</td>
+                    <td className="border border-gray-300 p-2 text-center">{Number(item.unit_price).toFixed(2)}</td>
+                    <td className="border border-gray-300 p-2 text-center font-bold">{Number(item.total).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
 
-        {/* Footer */}
-        <div className="border-t-2 border-gray-300 pt-6 text-center text-gray-600">
-          <p className="text-sm mb-2">تاريخ الطباعة: {printDate}</p>
-          <p className="text-xs">هذه الفاتورة صادرة من نظام الفواتير المحاسبية</p>
+          {/* Totals */}
+          <div className="mt-4 flex justify-end">
+            <div className="w-64 space-y-1 text-sm">
+              <div className="flex justify-between p-1 border-b">
+                <span>المجموع الفرعي:</span>
+                <span>{formatCurrency(Number(invoice.amount))}</span>
+              </div>
+              {Number(invoice.tax_amount) > 0 && (
+                <div className="flex justify-between p-1 border-b">
+                  <span>الضريبة (15%):</span>
+                  <span>{formatCurrency(Number(invoice.tax_amount))}</span>
+                </div>
+              )}
+              {Number(invoice.shipping_fee) > 0 && (
+                <div className="flex justify-between p-1 border-b">
+                  <span>رسوم التوصيل:</span>
+                  <span>{formatCurrency(Number(invoice.shipping_fee))}</span>
+                </div>
+              )}
+              <div className="flex justify-between p-2 bg-gray-900 text-white rounded mt-2">
+                <span className="font-bold">الإجمالي النهائي:</span>
+                <span className="font-bold">{formatCurrency(Number(invoice.total_amount))}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 pt-4 border-t border-gray-200 text-center">
+            <p className="text-xs text-gray-500 mb-1">شكراً لتعاملكم معنا</p>
+            <p className="text-[10px] text-gray-400">تاريخ الطباعة: {printDate}</p>
+          </div>
         </div>
       </div>
     );

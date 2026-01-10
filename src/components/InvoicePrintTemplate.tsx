@@ -52,42 +52,54 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
     return (
       <div
         ref={ref}
-        className="bg-white text-black w-full"
-        style={{ 
-          fontFamily: 'Arial, sans-serif',
-          direction: 'rtl',
-        }}
+        className="invoice-print-root"
       >
         <style dangerouslySetInnerHTML={{ __html: `
-          @page {
-            size: A4;
-            margin: 15mm;
-          }
           @media print {
-            html, body {
-              width: 100%;
-              height: 100%;
-              margin: 0 !important;
-              padding: 0 !important;
-              background: #fff;
+            /* إخفاء كل شيء في الموقع */
+            body * {
+              visibility: hidden !important;
             }
-            .print-wrapper {
+            
+            /* إظهار الفاتورة فقط ومحتوياتها */
+            .invoice-print-root, .invoice-print-root * {
+              visibility: visible !important;
+            }
+            
+            /* تثبيت الفاتورة في أعلى الصفحة وإلغاء أي إزاحة */
+            .invoice-print-root {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
               width: 100% !important;
               margin: 0 !important;
-              padding: 15mm !important;
-              box-sizing: border-box !important;
+              padding: 0 !important;
+              background-color: white !important;
             }
-            .no-print {
-              display: none !important;
+
+            @page {
+              size: A4;
+              margin: 15mm !important;
             }
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
+
+            /* إزالة أي خلفيات سوداء أو داكنة */
+            body {
+              background-color: white !important;
             }
+          }
+
+          /* تنسيق الفاتورة الداخلي */
+          .invoice-container {
+            width: 100%;
+            max-width: 210mm;
+            margin: 0 auto;
+            background: white;
+            direction: rtl;
+            font-family: Arial, sans-serif;
           }
         `}} />
         
-        <div className="print-wrapper flex flex-col w-full min-h-screen">
+        <div className="invoice-container flex flex-col p-4">
           {/* Header */}
           <div className="flex justify-between items-center mb-10 border-b-8 border-gray-900 pb-6">
             <div>

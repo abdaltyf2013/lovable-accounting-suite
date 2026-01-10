@@ -52,37 +52,42 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
     return (
       <div
         ref={ref}
-        className="bg-white text-black mx-auto"
+        className="bg-white text-black w-full"
         style={{ 
-          width: '210mm', // عرض A4
-          minHeight: '297mm', // طول A4
           fontFamily: 'Arial, sans-serif',
           direction: 'rtl',
-          padding: '15mm'
         }}
       >
         <style dangerouslySetInnerHTML={{ __html: `
           @page {
             size: A4;
-            margin: 0;
+            margin: 15mm;
           }
           @media print {
-            body {
-              -webkit-print-color-adjust: exact;
-              margin: 0;
-              padding: 0;
+            html, body {
+              width: 100%;
+              height: 100%;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #fff;
             }
-            .print-container {
-              width: 210mm !important;
-              height: 297mm !important;
+            .print-wrapper {
+              width: 100% !important;
               margin: 0 !important;
               padding: 15mm !important;
-              border: none !important;
+              box-sizing: border-box !important;
+            }
+            .no-print {
+              display: none !important;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
           }
         `}} />
         
-        <div className="print-container flex flex-col h-full">
+        <div className="print-wrapper flex flex-col w-full min-h-screen">
           {/* Header */}
           <div className="flex justify-between items-center mb-10 border-b-8 border-gray-900 pb-6">
             <div>
@@ -125,7 +130,7 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
 
           {/* Items Table */}
           <div className="flex-grow mb-12">
-            <table className="w-full text-xl border-collapse shadow-sm">
+            <table className="w-full text-xl border-collapse">
               <thead>
                 <tr className="bg-gray-900 text-white">
                   <th className="border-4 border-gray-900 p-5 text-right rounded-tr-2xl">الوصف</th>

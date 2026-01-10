@@ -495,9 +495,11 @@ export default function Invoices({ type }: InvoicesPageProps) {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewInvoice(invoice)}>
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(invoice.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {isAdmin && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(invoice.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -593,14 +595,16 @@ export default function Invoices({ type }: InvoicesPageProps) {
                     >
                       تحديد كمدفوعة
                     </Button>
-                    <Button
-                      variant="destructive"
-                      className="flex-1"
-                      onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
-                      disabled={selectedInvoice.status === 'cancelled'}
-                    >
-                      إلغاء الفاتورة
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
+                        disabled={selectedInvoice.status === 'cancelled'}
+                      >
+                        إلغاء الفاتورة
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

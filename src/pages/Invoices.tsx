@@ -81,7 +81,6 @@ export default function Invoices({ type }: InvoicesPageProps) {
     client_id: '',
     client_name: '',
     notes: '',
-    shipping_fee: 0,
     status: 'paid' as 'pending' | 'paid' | 'cancelled',
   });
 
@@ -156,8 +155,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const tax = includeTax ? subtotal * TAX_RATE : 0;
-    const shipping = Number(formData.shipping_fee) || 0;
-    return { subtotal, tax, total: subtotal + tax + shipping };
+    return { subtotal, tax, total: subtotal + tax };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,7 +175,6 @@ export default function Invoices({ type }: InvoicesPageProps) {
         amount: subtotal,
         tax_amount: tax,
         total_amount: total,
-        shipping_fee: Number(formData.shipping_fee) || 0,
         status: formData.status,
         notes: formData.notes,
         accountant_name: profile?.full_name || user.email,
@@ -233,7 +230,6 @@ export default function Invoices({ type }: InvoicesPageProps) {
       client_id: '',
       client_name: '',
       notes: '',
-      shipping_fee: 0,
       status: 'paid',
     });
     setItems([{ description: '', quantity: 1, unit_price: 0, total: 0 }]);
@@ -631,12 +627,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
                       <span>الضريبة (15%):</span>
                       <span>{formatCurrency(selectedInvoice.tax_amount)}</span>
                     </div>
-                    {selectedInvoice.shipping_fee > 0 && (
-                      <div className="flex justify-between text-gray-600">
-                        <span>رسوم التوصيل:</span>
-                        <span>{formatCurrency(selectedInvoice.shipping_fee)}</span>
-                      </div>
-                    )}
+
                     <div className="flex justify-between text-2xl font-bold text-gray-900 border-t-2 border-gray-900 pt-3 mt-3">
                       <span>الإجمالي:</span>
                       <span>{formatCurrency(selectedInvoice.total_amount)}</span>

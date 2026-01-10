@@ -155,12 +155,7 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
                   <span>{formatCurrency(Number(invoice.tax_amount))}</span>
                 </div>
               )}
-              {Number(invoice.shipping_fee) > 0 && (
-                <div className="flex justify-between p-1 border-b">
-                  <span>رسوم التوصيل:</span>
-                  <span>{formatCurrency(Number(invoice.shipping_fee))}</span>
-                </div>
-              )}
+
               <div className="flex justify-between p-2 bg-gray-900 text-white rounded mt-2">
                 <span className="font-bold">الإجمالي النهائي:</span>
                 <span className="font-bold">{formatCurrency(Number(invoice.total_amount))}</span>

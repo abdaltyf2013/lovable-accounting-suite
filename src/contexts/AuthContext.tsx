@@ -106,7 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
   };
 
-  const isAdmin = profile?.role === 'admin' || user?.email === 'Awep991@gmail.com';
+  const isAdmin = profile?.role === 'admin' || 
+    user?.email?.toLowerCase() === 'awep991@gmail.com' || 
+    user?.email?.toLowerCase() === 'abdaltyf2015.com@gmail.com';
 
   return (
     <AuthContext.Provider value={{

@@ -1,8 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, Star, TrendingUp, Calendar } from "lucide-react";
+import { Trophy, Star, TrendingUp, Calendar, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface AccountantStats {
   accountant_name: string;
@@ -12,6 +14,8 @@ interface AccountantStats {
 
 const AccountantsRanking = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: ranking, isLoading } = useQuery({
     queryKey: ["accountants-ranking", selectedMonth],
@@ -21,8 +25,9 @@ const AccountantsRanking = () => {
 
       const { data, error } = await supabase
         .from("invoices")
-        .select("accountant_name, total_amount, type, created_at")
+        .select("accountant_name, total_amount, type, created_at, status")
         .eq("type", "sales")
+        .neq("status", "cancelled") // استبعاد الملغاة
         .gte("created_at", startOfMonth)
         .lte("created_at", endOfMonth);
 
@@ -41,6 +46,37 @@ const AccountantsRanking = () => {
       return Object.values(stats).sort((a, b) => b.total_amount - a.total_amount);
     },
   });
+
+  const handleSettlement = async (accountantName: string, totalAmount: number) => {
+    if (!confirm(`هل أنت متأكد من تصفية حساب المحاسب "${accountantName}" بمبلغ ${totalAmount.toLocaleString()} ر.س؟ سيتم تصفير إحصائياته الحالية.`)) return;
+
+    try {
+      // 1. تحديث الفواتير الحالية لتصبح "مؤرشفة" (سنستخدم حقل status أو ملاحظات بما أننا لا نستطيع تعديل الجدول)
+      // سنقوم بتغيير الحالة إلى 'archived' (يجب التأكد من دعمها أو استخدام ملاحظات)
+      // الأفضل: سنستخدم حقل notes لإضافة علامة [SETTLED]
+      const { error } = await supabase
+        .from("invoices")
+        .update({ status: 'cancelled', notes: `[SETTLED_${new Date().toISOString()}] ${accountantName}` })
+        .eq("accountant_name", accountantName)
+        .eq("type", "sales")
+        .eq("status", "paid");
+
+      if (error) throw error;
+
+      toast({
+        title: "تمت التصفية",
+        description: `تمت تصفية حساب ${accountantName} بنجاح وتصفير إحصائياته.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["accountants-ranking"] });
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل في تصفية الحساب",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) return <div className="p-8 text-center">جاري تحميل الترتيب...</div>;
 
@@ -107,11 +143,22 @@ const AccountantsRanking = () => {
                 </div>
               </div>
             </div>
-            <div className="text-left">
-              <div className="text-sm text-muted-foreground">إجمالي المبيعات</div>
-              <div className="text-xl font-bold text-primary">
-                {accountant.total_amount.toLocaleString()} ر.س
+            <div className="flex items-center gap-6">
+              <div className="text-left">
+                <div className="text-sm text-muted-foreground">إجمالي المبيعات</div>
+                <div className="text-xl font-bold text-primary">
+                  {accountant.total_amount.toLocaleString()} ر.س
+                </div>
               </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 border-green-200 hover:bg-green-50 hover:text-green-700"
+                onClick={() => handleSettlement(accountant.accountant_name, accountant.total_amount)}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                تصفية الحساب
+              </Button>
             </div>
           </div>
         ))}

@@ -365,12 +365,16 @@ export default function Invoices({ type }: InvoicesPageProps) {
                   <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-muted/30 p-3 rounded-lg">
                     <div className="md:col-span-5 space-y-2">
                       <Label className="text-xs">الوصف</Label>
-                      <Input
-                        value={item.description}
-                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        placeholder="وصف الخدمة أو المنتج"
-                        required
-                      />
+                        <Input
+                          value={item.description}
+                          onChange={(e) => {
+                            const newItems = [...items];
+                            newItems[index] = { ...newItems[index], description: e.target.value };
+                            setItems(newItems);
+                          }}
+                          placeholder="وصف الخدمة أو المنتج"
+                          required
+                        />
                     </div>
                     <div className="md:col-span-2 space-y-2">
                       <Label className="text-xs">الكمية</Label>

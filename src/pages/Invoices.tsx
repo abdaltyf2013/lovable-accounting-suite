@@ -23,7 +23,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Eye, Trash2, FileText, Printer } from 'lucide-react';
-import InvoicePrintTemplate from '@/components/InvoicePrintTemplate';
 
 interface Invoice {
   id: string;
@@ -58,7 +57,7 @@ interface InvoicesPageProps {
 }
 
 export default function Invoices({ type }: InvoicesPageProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -68,6 +67,14 @@ export default function Invoices({ type }: InvoicesPageProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedInvoiceItems, setSelectedInvoiceItems] = useState<InvoiceItem[]>([]);
+
+  const canEdit = (createdAt: string) => {
+    if (isAdmin) return true;
+    const createdTime = new Date(createdAt).getTime();
+    const now = new Date().getTime();
+    const diffInMinutes = (now - createdTime) / (1000 * 60);
+    return diffInMinutes <= 5;
+  };
 
   const [formData, setFormData] = useState({
     client_id: '',
@@ -81,8 +88,6 @@ export default function Invoices({ type }: InvoicesPageProps) {
   ]);
 
   const [includeTax, setIncludeTax] = useState(true);
-  const printRef = useRef<HTMLDivElement>(null);
-
   const TAX_RATE = 0.15; // 15% VAT
 
   useEffect(() => {
@@ -98,7 +103,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setInvoices(data as Invoice[]);
+      setInvoices(data);
     }
     setLoading(false);
   };
@@ -108,218 +113,183 @@ export default function Invoices({ type }: InvoicesPageProps) {
     if (data) setClients(data);
   };
 
-  const generateInvoiceNumber = () => {
-    const prefix = type === 'sales' ? 'INV' : 'PUR';
-    const date = new Date();
-    const timestamp = date.getTime().toString().slice(-6);
-    return `${prefix}-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}-${timestamp}`;
-  };
-
-  const calculateTotals = (withTax: boolean = includeTax) => {
-    const amount = items.reduce((sum, item) => sum + item.total, 0);
-    const tax_amount = withTax ? amount * TAX_RATE : 0;
-    const total_amount = amount + tax_amount;
-    return { amount, tax_amount, total_amount };
-  };
-
-  const handleItemChange = (index: number, field: keyof InvoiceItem, value: string | number) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-
-    if (field === 'quantity' || field === 'unit_price') {
-      newItems[index].total = Number(newItems[index].quantity) * Number(newItems[index].unit_price);
-    }
-
-    setItems(newItems);
-  };
-
-  const addItem = () => {
+  const handleAddItem = () => {
     setItems([...items, { description: '', quantity: 1, unit_price: 0, total: 0 }]);
   };
 
-  const removeItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
+  const handleRemoveItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleItemChange = (index: number, field: keyof InvoiceItem, value: any) => {
+    const newItems = [...items];
+    const item = { ...newItems[index], [field]: value };
+    
+    if (field === 'quantity' || field === 'unit_price') {
+      item.total = Number(item.quantity) * Number(item.unit_price);
     }
+    
+    newItems[index] = item;
+    setItems(newItems);
+  };
+
+  const calculateTotals = () => {
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    const tax = includeTax ? subtotal * TAX_RATE : 0;
+    return { subtotal, tax, total: subtotal + tax };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
 
-    const validItems = items.filter((item) => item.description && item.total > 0);
-    if (validItems.length === 0) {
-      toast({ title: 'خطأ', description: 'أضف بند واحد على الأقل', variant: 'destructive' });
-      return;
-    }
+    const { subtotal, tax, total } = calculateTotals();
+    const invoiceNumber = `${type === 'sales' ? 'INV' : 'PUR'}-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const { amount, tax_amount, total_amount } = calculateTotals(includeTax);
-    const invoice_number = generateInvoiceNumber();
-
-    const selectedClient = clients.find((c) => c.id === formData.client_id);
-
-    const { data: invoiceData, error: invoiceError } = await supabase
+    const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
       .insert({
-        invoice_number,
+        invoice_number: invoiceNumber,
         type,
         client_id: formData.client_id || null,
-        client_name: selectedClient?.name || formData.client_name,
-        amount,
-        tax_amount,
-        total_amount,
+        client_name: formData.client_name,
+        amount: subtotal,
+        tax_amount: tax,
+        total_amount: total,
         status: formData.status,
-        notes: formData.notes || null,
-        created_by: user?.id,
-        accountant_name: profile?.full_name,
+        notes: formData.notes,
+        accountant_name: profile?.full_name || user.email,
       })
       .select()
       .single();
 
     if (invoiceError) {
-      toast({ title: 'خطأ', description: 'فشل في إنشاء الفاتورة', variant: 'destructive' });
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء إنشاء الفاتورة',
+        variant: 'destructive',
+      });
       return;
     }
 
-    const invoiceItems = validItems.map((item) => ({
-      invoice_id: invoiceData.id,
+    const invoiceItems = items.map(item => ({
+      invoice_id: invoice.id,
       description: item.description,
       quantity: item.quantity,
       unit_price: item.unit_price,
       total: item.total,
     }));
 
-    const { error: itemsError } = await supabase.from('invoice_items').insert(invoiceItems);
+    const { error: itemsError } = await supabase
+      .from('invoice_items')
+      .insert(invoiceItems);
 
     if (itemsError) {
-      toast({ title: 'خطأ', description: 'فشل في إضافة البنود', variant: 'destructive' });
-    } else {
-      toast({ title: 'تم الإنشاء', description: 'تم إنشاء الفاتورة بنجاح' });
-      fetchInvoices();
-      resetForm();
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء إضافة بنود الفاتورة',
+        variant: 'destructive',
+      });
+      return;
     }
+
+    toast({
+      title: 'تم بنجاح',
+      description: 'تم إنشاء الفاتورة بنجاح',
+    });
+
+    setDialogOpen(false);
+    resetForm();
+    fetchInvoices();
+  };
+
+  const resetForm = () => {
+    setFormData({
+      client_id: '',
+      client_name: '',
+      notes: '',
+      status: 'paid',
+    });
+    setItems([{ description: '', quantity: 1, unit_price: 0, total: 0 }]);
   };
 
   const handleViewInvoice = async (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
     const { data } = await supabase
       .from('invoice_items')
       .select('*')
       .eq('invoice_id', invoice.id);
+    
+    setSelectedInvoice(invoice);
     setSelectedInvoiceItems(data || []);
     setViewDialogOpen(true);
-  };
-
-  const handleUpdateStatus = async (invoiceId: string, status: 'pending' | 'paid' | 'cancelled') => {
-    const { error } = await supabase
-      .from('invoices')
-      .update({ status })
-      .eq('id', invoiceId);
-
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في تحديث الحالة', variant: 'destructive' });
-    } else {
-      toast({ title: 'تم التحديث', description: 'تم تحديث حالة الفاتورة' });
-      fetchInvoices();
-      setViewDialogOpen(false);
-    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) return;
 
     const { error } = await supabase.from('invoices').delete().eq('id', id);
-
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في حذف الفاتورة', variant: 'destructive' });
-    } else {
-      toast({ title: 'تم الحذف', description: 'تم حذف الفاتورة بنجاح' });
+    if (!error) {
+      toast({ title: 'تم بنجاح', description: 'تم حذف الفاتورة' });
       fetchInvoices();
     }
   };
 
-  const resetForm = () => {
-    setFormData({ client_id: '', client_name: '', notes: '', status: 'paid' });
-    setItems([{ description: '', quantity: 1, unit_price: 0, total: 0 }]);
-    setIncludeTax(true);
-    setDialogOpen(false);
-  };
+  const handleUpdateStatus = async (id: string, status: 'pending' | 'paid' | 'cancelled') => {
+    const { error } = await supabase
+      .from('invoices')
+      .update({ status })
+      .eq('id', id);
 
-  const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>طباعة فاتورة - ${selectedInvoice?.invoice_number}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            @media print {
-              body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-            }
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-          </style>
-        </head>
-        <body>
-          ${printContent.innerHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
+    if (!error) {
+      toast({ title: 'تم بنجاح', description: 'تم تحديث حالة الفاتورة' });
+      setViewDialogOpen(false);
+      fetchInvoices();
+    }
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(amount);
+    return new Intl.NumberFormat('ar-SA', {
+      style: 'currency',
+      currency: 'SAR',
+    }).format(amount);
   };
 
-  const filteredInvoices = invoices.filter(
-    (inv) =>
-      inv.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
-      inv.client_name.toLowerCase().includes(search.toLowerCase())
+  const filteredInvoices = invoices.filter(i => 
+    i.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
+    i.client_name.toLowerCase().includes(search.toLowerCase())
   );
-
-  const title = type === 'sales' ? 'فواتير المبيعات' : 'فواتير المشتريات';
-  const { amount, tax_amount, total_amount } = calculateTotals();
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-          <p className="text-muted-foreground">إدارة {title}</p>
-        </div>
-
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+        <h1 className="text-2xl font-bold text-foreground">
+          {type === 'sales' ? 'فواتير المبيعات' : 'فواتير المشتريات'}
+        </h1>
+        
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="w-full sm:w-auto gap-2">
               <Plus className="w-4 h-4" />
-              فاتورة جديدة
+              إنشاء فاتورة جديدة
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>إنشاء فاتورة {type === 'sales' ? 'مبيعات' : 'مشتريات'}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>اختر عميل</Label>
+                  <Label>العميل</Label>
                   <Select
                     value={formData.client_id}
-                    onValueChange={(value) => setFormData({ ...formData, client_id: value, client_name: '' })}
+                    onValueChange={(value) => {
+                      const client = clients.find(c => c.id === value);
+                      setFormData({ ...formData, client_id: value, client_name: client?.name || '' });
+                    }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="اختر عميل..." />
+                      <SelectValue placeholder="اختر عميلاً" />
                     </SelectTrigger>
                     <SelectContent>
                       {clients.map((client) => (
@@ -331,297 +301,305 @@ export default function Invoices({ type }: InvoicesPageProps) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>أو أدخل اسم العميل</Label>
+                  <Label>اسم العميل (يدوي)</Label>
                   <Input
                     value={formData.client_name}
-                    onChange={(e) => setFormData({ ...formData, client_name: e.target.value, client_id: '' })}
-                    placeholder="اسم العميل"
+                    onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                    placeholder="أدخل اسم العميل"
+                    required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>بنود الفاتورة</Label>
-                <div className="space-y-2">
-                  {items.map((item, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                      <div className="col-span-5">
-                        <Input
-                          placeholder="الوصف"
-                          value={item.description}
-                          onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Input
-                          type="number"
-                          placeholder="الكمية"
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
-                          min="1"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Input
-                          type="number"
-                          placeholder="السعر"
-                          value={item.unit_price}
-                          onChange={(e) => handleItemChange(index, 'unit_price', Number(e.target.value))}
-                          min="0"
-                        />
-                      </div>
-                      <div className="col-span-2 text-sm font-medium py-2">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-lg font-bold">البنود</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
+                    إضافة بند
+                  </Button>
+                </div>
+                
+                {items.map((item, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-muted/30 p-3 rounded-lg">
+                    <div className="md:col-span-5 space-y-2">
+                      <Label className="text-xs">الوصف</Label>
+                      <Input
+                        value={item.description}
+                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        placeholder="وصف الخدمة أو المنتج"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <Label className="text-xs">الكمية</Label>
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                        min="1"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <Label className="text-xs">السعر</Label>
+                      <Input
+                        type="number"
+                        value={item.unit_price}
+                        onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
+                        min="0"
+                        step="0.01"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <Label className="text-xs">المجموع</Label>
+                      <div className="h-10 flex items-center px-3 bg-muted rounded-md text-sm font-medium">
                         {formatCurrency(item.total)}
                       </div>
-                      <div className="col-span-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeItem(index)}
-                          disabled={items.length === 1}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
                     </div>
-                  ))}
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                  <Plus className="w-4 h-4 ml-1" /> إضافة بند
-                </Button>
-              </div>
-
-              {/* Tax Toggle */}
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="include-tax" className="font-medium">تضمين ضريبة القيمة المضافة (15%)</Label>
-                </div>
-                <Switch
-                  id="include-tax"
-                  checked={includeTax}
-                  onCheckedChange={setIncludeTax}
-                />
-              </div>
-
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                <div className="flex justify-between">
-                  <span>المجموع قبل الضريبة:</span>
-                  <span>{formatCurrency(amount)}</span>
-                </div>
-                {includeTax && (
-                  <div className="flex justify-between text-primary">
-                    <span>ضريبة القيمة المضافة (15%):</span>
-                    <span>{formatCurrency(tax_amount)}</span>
+                    <div className="md:col-span-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive"
+                        onClick={() => handleRemoveItem(index)}
+                        disabled={items.length === 1}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                )}
-                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>الإجمالي:</span>
-                  <span>{formatCurrency(total_amount)}</span>
+                ))}
+              </div>
+
+              <div className="flex flex-col md:flex-row justify-between gap-6 pt-4 border-t">
+                <div className="space-y-4 flex-1">
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <Switch
+                      id="tax"
+                      checked={includeTax}
+                      onCheckedChange={setIncludeTax}
+                    />
+                    <Label htmlFor="tax">إضافة ضريبة القيمة المضافة (15%)</Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>ملاحظات</Label>
+                    <Textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="أي ملاحظات إضافية..."
+                    />
+                  </div>
+                </div>
+                
+                <div className="w-full md:w-64 space-y-2 bg-muted/50 p-4 rounded-lg">
+                  <div className="flex justify-between text-sm">
+                    <span>المجموع الفرعي:</span>
+                    <span>{formatCurrency(calculateTotals().subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>الضريبة:</span>
+                    <span>{formatCurrency(calculateTotals().tax)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
+                    <span>الإجمالي:</span>
+                    <span>{formatCurrency(calculateTotals().total)}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>ملاحظات</Label>
-                <Textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1">إنشاء الفاتورة</Button>
-                <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button>
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  إلغاء
+                </Button>
+                <Button type="submit">حفظ الفاتورة</Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="بحث عن فاتورة..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pr-10"
-        />
-      </div>
-
-      {loading ? (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">جاري التحميل...</p>
-        </div>
-      ) : filteredInvoices.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center">
-            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">لا توجد فواتير</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full bg-card rounded-lg overflow-hidden">
-            <thead className="bg-muted">
-              <tr>
-                <th className="text-right py-3 px-4 text-sm font-medium">رقم الفاتورة</th>
-                <th className="text-right py-3 px-4 text-sm font-medium">العميل</th>
-                <th className="text-right py-3 px-4 text-sm font-medium">المبلغ</th>
-                <th className="text-right py-3 px-4 text-sm font-medium">المحاسب</th>
-                <th className="text-right py-3 px-4 text-sm font-medium">الحالة</th>
-                <th className="text-right py-3 px-4 text-sm font-medium">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInvoices.map((invoice) => (
-                <tr key={invoice.id} className="border-t">
-                  <td className="py-3 px-4 font-mono text-sm">{invoice.invoice_number}</td>
-                  <td className="py-3 px-4">{invoice.client_name}</td>
-                  <td className="py-3 px-4 font-medium">{formatCurrency(Number(invoice.total_amount))}</td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.accountant_name || '-'}</td>
-                  <td className="py-3 px-4">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      invoice.status === 'paid'
-                        ? 'bg-green-100 text-green-700'
-                        : invoice.status === 'cancelled'
-                        ? (invoice.notes?.includes('[SETTLED_') ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700')
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {invoice.status === 'paid' ? 'مدفوعة' : (invoice.status === 'cancelled' && invoice.notes?.includes('[SETTLED_') ? 'تمت المحاسبة' : invoice.status === 'cancelled' ? 'ملغاة' : 'معلقة')}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewInvoice(invoice)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {isAdmin && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(invoice.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </td>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="البحث برقم الفاتورة أو اسم العميل..."
+              className="pr-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b text-right">
+                  <th className="py-3 px-4 font-medium text-muted-foreground">رقم الفاتورة</th>
+                  <th className="py-3 px-4 font-medium text-muted-foreground">التاريخ</th>
+                  <th className="py-3 px-4 font-medium text-muted-foreground">العميل</th>
+                  <th className="py-3 px-4 font-medium text-muted-foreground">المبلغ</th>
+                  <th className="py-3 px-4 font-medium text-muted-foreground">المحاسب</th>
+                  <th className="py-3 px-4 font-medium text-muted-foreground">الحالة</th>
+                  <th className="py-3 px-4 font-medium text-muted-foreground">الإجراءات</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground">جاري التحميل...</td>
+                  </tr>
+                ) : filteredInvoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground">لا توجد فواتير</td>
+                  </tr>
+                ) : (
+                  filteredInvoices.map((invoice) => (
+                    <tr key={invoice.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                      <td className="py-3 px-4 font-mono text-sm">{invoice.invoice_number}</td>
+                      <td className="py-3 px-4 text-sm">{new Date(invoice.created_at).toLocaleDateString('ar-SA')}</td>
+                      <td className="py-3 px-4">{invoice.client_name}</td>
+                      <td className="py-3 px-4 font-medium">{formatCurrency(Number(invoice.total_amount))}</td>
+                      <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.accountant_name || '-'}</td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                          invoice.status === 'paid'
+                            ? 'bg-green-100 text-green-700'
+                            : invoice.status === 'cancelled'
+                            ? (invoice.notes?.includes('[SETTLED_') ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700')
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {invoice.status === 'paid' ? 'مدفوعة' : (invoice.status === 'cancelled' && invoice.notes?.includes('[SETTLED_') ? 'تمت المحاسبة' : invoice.status === 'cancelled' ? 'ملغاة' : 'معلقة')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewInvoice(invoice)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {!isAdmin && canEdit(invoice.created_at) && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => handleViewInvoice(invoice)}>
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(invoice.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* View Invoice Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">تفاصيل الفاتورة</DialogTitle>
+            <DialogTitle>تفاصيل الفاتورة</DialogTitle>
           </DialogHeader>
           {selectedInvoice && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">رقم الفاتورة:</span>
+                  <p className="text-muted-foreground">رقم الفاتورة:</p>
                   <p className="font-mono font-bold">{selectedInvoice.invoice_number}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">العميل:</span>
-                  <p className="font-medium">{selectedInvoice.client_name}</p>
+                  <p className="text-muted-foreground">التاريخ:</p>
+                  <p className="font-bold">{new Date(selectedInvoice.created_at).toLocaleDateString('ar-SA')}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">المحاسب:</span>
-                  <p>{selectedInvoice.accountant_name || '-'}</p>
+                  <p className="text-muted-foreground">العميل:</p>
+                  <p className="font-bold">{selectedInvoice.client_name}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">التاريخ:</span>
-                  <p>{new Date(selectedInvoice.created_at).toLocaleDateString('ar-SA')}</p>
+                  <p className="text-muted-foreground">المحاسب:</p>
+                  <p className="font-bold">{selectedInvoice.accountant_name}</p>
                 </div>
               </div>
 
               <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[400px]">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="text-right py-2 px-3">الوصف</th>
-                        <th className="text-right py-2 px-3">الكمية</th>
-                        <th className="text-right py-2 px-3">السعر</th>
-                        <th className="text-right py-2 px-3">المجموع</th>
-                      </tr>
-                    </thead>
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr className="text-right">
+                      <th className="py-2 px-4">الوصف</th>
+                      <th className="py-2 px-4">الكمية</th>
+                      <th className="py-2 px-4">السعر</th>
+                      <th className="py-2 px-4">المجموع</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {selectedInvoiceItems.map((item, index) => (
                       <tr key={index} className="border-t">
-                        <td className="py-2 px-3">{item.description}</td>
-                        <td className="py-2 px-3">{item.quantity}</td>
-                        <td className="py-2 px-3">{formatCurrency(Number(item.unit_price))}</td>
-                        <td className="py-2 px-3">{formatCurrency(Number(item.total))}</td>
+                        <td className="py-2 px-4">{item.description}</td>
+                        <td className="py-2 px-4">{item.quantity}</td>
+                        <td className="py-2 px-4">{formatCurrency(item.unit_price)}</td>
+                        <td className="py-2 px-4">{formatCurrency(item.total)}</td>
                       </tr>
                     ))}
                   </tbody>
-                  </table>
+                </table>
+              </div>
+
+              <div className="flex flex-col items-end space-y-1">
+                <div className="flex justify-between w-48 text-sm">
+                  <span>المجموع:</span>
+                  <span>{formatCurrency(selectedInvoice.amount)}</span>
+                </div>
+                <div className="flex justify-between w-48 text-sm">
+                  <span>الضريبة (15%):</span>
+                  <span>{formatCurrency(selectedInvoice.tax_amount)}</span>
+                </div>
+                <div className="flex justify-between w-48 text-lg font-bold border-t pt-1">
+                  <span>الإجمالي:</span>
+                  <span>{formatCurrency(selectedInvoice.total_amount)}</span>
                 </div>
               </div>
 
-                <div className="bg-muted p-4 rounded-lg space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>المجموع:</span>
-                    <span>{formatCurrency(Number(selectedInvoice.amount))}</span>
-                  </div>
-                  {Number(selectedInvoice.tax_amount) > 0 && (
-                    <div className="flex justify-between">
-                      <span>الضريبة (15%):</span>
-                      <span>{formatCurrency(Number(selectedInvoice.tax_amount))}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-base border-t pt-2">
-                    <span>الإجمالي:</span>
-                    <span>{formatCurrency(Number(selectedInvoice.total_amount))}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    window.print();
+                  }}
+                >
+                  <Printer className="w-4 h-4" />
+                  طباعة الفاتورة
+                </Button>
+                <div className="flex flex-1 gap-2">
                   <Button
-                    className="flex-1 gap-2 w-full"
-                    onClick={handlePrint}
+                    variant="secondary"
+                    className="flex-1 bg-green-100 text-green-700 hover:bg-green-200"
+                    onClick={() => handleUpdateStatus(selectedInvoice.id, 'paid')}
+                    disabled={selectedInvoice.status === 'paid'}
                   >
-                    <Printer className="w-4 h-4" />
-                    طباعة الفاتورة
+                    تحديد كمدفوعة
                   </Button>
-                  <div className="flex gap-2 flex-1">
+                  {isAdmin && (
                     <Button
-                      variant={selectedInvoice.status === 'paid' ? 'secondary' : 'outline'}
+                      variant="destructive"
                       className="flex-1"
-                      onClick={() => handleUpdateStatus(selectedInvoice.id, 'paid')}
-                      disabled={selectedInvoice.status === 'paid'}
+                      onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
+                      disabled={selectedInvoice.status === 'cancelled'}
                     >
-                      تحديد كمدفوعة
+                      إلغاء الفاتورة
                     </Button>
-                    {isAdmin && (
-                      <Button
-                        variant="destructive"
-                        className="flex-1"
-                        onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
-                        disabled={selectedInvoice.status === 'cancelled'}
-                      >
-                        إلغاء الفاتورة
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
-            )}
-
-            {/* Hidden Print Template */}
-            <div className="hidden">
-              {selectedInvoice && (
-                <InvoicePrintTemplate
-                  ref={printRef}
-                  invoice={selectedInvoice}
-                  items={selectedInvoiceItems}
-                />
-              )}
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-    );
-  }
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

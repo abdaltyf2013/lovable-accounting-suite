@@ -617,17 +617,38 @@ export default function Invoices({ type }: InvoicesPageProps) {
                 <Button
                   variant="outline"
                   className="flex-1 gap-2 h-12 text-lg font-bold border-2 hover:bg-primary hover:text-white transition-all"
-                  onClick={() => {
+                  onClick={async () => {
                     const element = document.getElementById('invoice-content');
-                    const opt = {
-                      margin: 0,
-                      filename: `فاتورة-${selectedInvoice.invoice_number}.pdf`,
-                      image: { type: 'jpeg', quality: 0.98 },
-                      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                    };
-                    // @ts-ignore
-                    html2pdf().set(opt).from(element).save();
+                    if (!element) return;
+                    
+                    try {
+                      toast({ title: 'جاري التحميل', description: 'يتم الآن تجهيز ملف PDF...' });
+                      
+                      // @ts-ignore
+                      const canvas = await html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                      });
+                      
+                      const imgData = canvas.toDataURL('image/png');
+                      // @ts-ignore
+                      const { jsPDF } = window.jspdf;
+                      const pdf = new jsPDF('p', 'mm', 'a4');
+                      
+                      const imgProps = pdf.getImageProperties(imgData);
+                      const pdfWidth = pdf.internal.pageSize.getWidth();
+                      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                      
+                      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                      pdf.save(`فاتورة-${selectedInvoice.invoice_number}.pdf`);
+                      
+                      toast({ title: 'تم التحميل', description: 'تم حفظ الفاتورة بنجاح' });
+                    } catch (error) {
+                      console.error('PDF Error:', error);
+                      toast({ title: 'خطأ', description: 'فشل في تحميل ملف PDF، يرجى تجربة الطباعة العادية', variant: 'destructive' });
+                    }
                   }}
                 >
                   <Printer className="w-5 h-5" />

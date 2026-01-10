@@ -8,7 +8,6 @@ interface Profile {
   full_name: string;
   email: string;
   role: 'admin' | 'accountant';
-  is_approved: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -111,8 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user?.email?.toLowerCase() === 'awep991@gmail.com' || 
     user?.email?.toLowerCase() === 'abdaltyf2015.com@gmail.com';
 
-  const isApproved = profile?.is_approved || isAdmin;
-
   return (
     <AuthContext.Provider value={{
       user,
@@ -122,8 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signUp,
       signOut,
-      isAdmin,
-      isApproved
+      isAdmin
     }}>
       {children}
     </AuthContext.Provider>

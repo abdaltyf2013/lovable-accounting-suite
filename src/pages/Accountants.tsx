@@ -38,7 +38,6 @@ interface Profile {
   full_name: string;
   email: string;
   role: 'admin' | 'accountant';
-  is_approved: boolean;
   created_at: string;
 }
 
@@ -127,19 +126,7 @@ export default function Accountants() {
     setDialogOpen(true);
   };
 
-  const handleApprove = async (profile: Profile) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_approved: true })
-      .eq('id', profile.id);
 
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في اعتماد المحاسب', variant: 'destructive' });
-    } else {
-      toast({ title: 'تم الاعتماد', description: `تم اعتماد المحاسب ${profile.full_name} بنجاح` });
-      fetchData();
-    }
-  };
 
   const handleDelete = async (profile: Profile) => {
     if (profile.user_id === currentProfile?.user_id) {
@@ -264,7 +251,7 @@ export default function Accountants() {
           {filteredProfiles.map((profile) => {
             const stats = getAccountantStats(profile);
             return (
-              <Card key={profile.id} className={`hover:shadow-lg transition-shadow ${!profile.is_approved ? 'border-yellow-400 bg-yellow-50/30' : ''}`}>
+              <Card key={profile.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center ${profile.role === 'admin' ? 'bg-primary' : 'bg-secondary'}`}>
@@ -273,9 +260,6 @@ export default function Accountants() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-base truncate">{profile.full_name}</CardTitle>
-                        {!profile.is_approved && (
-                          <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-bold">بانتظار الموافقة</span>
-                        )}
                       </div>
                       <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${profile.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-secondary/50 text-secondary-foreground'}`}>
                         {profile.role === 'admin' ? <><ShieldCheck className="w-3 h-3" />مدير</> : <><Shield className="w-3 h-3" />محاسب</>}
@@ -311,11 +295,6 @@ export default function Accountants() {
                     
                     {profile.user_id !== currentProfile?.user_id && (
                       <>
-                        {!profile.is_approved && (
-                          <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700 gap-1" onClick={() => handleApprove(profile)}>
-                            <CheckCircle2 className="w-4 h-4" /> اعتماد
-                          </Button>
-                        )}
                         <Button variant="ghost" size="sm" onClick={() => handleEditName(profile)}>
                           <Edit2 className="w-4 h-4" />
                         </Button>

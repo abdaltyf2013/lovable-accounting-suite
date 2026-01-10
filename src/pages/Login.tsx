@@ -19,15 +19,7 @@ export default function Login() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (searchParams.get('error') === 'not_approved') {
-      toast({
-        title: 'بانتظار الموافقة',
-        description: 'حسابك بانتظار موافقة المدير للدخول إلى النظام',
-        variant: 'destructive',
-      });
-    }
-  }, [searchParams]);
+
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

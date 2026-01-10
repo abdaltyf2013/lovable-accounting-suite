@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import { Loader2 } from 'lucide-react';
 
 export default function MainLayout() {
-  const { user, loading, isApproved, signOut } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -19,11 +19,6 @@ export default function MainLayout() {
 
   if (!user) {
     return <Navigate to="/login" replace />;
-  }
-
-  if (!isApproved && !loading) {
-    signOut();
-    return <Navigate to="/login?error=not_approved" replace />;
   }
 
   return (

@@ -516,104 +516,112 @@ export default function Invoices({ type }: InvoicesPageProps) {
       </Card>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl print:max-w-full print:fixed print:inset-0 print:bg-white print:m-0 print:p-8">
+        <DialogContent className="max-w-2xl print:max-w-full print:fixed print:inset-0 print:bg-white print:m-0 print:p-0 print:shadow-none print:border-none">
           <DialogHeader className="print:hidden">
             <DialogTitle>تفاصيل الفاتورة</DialogTitle>
           </DialogHeader>
           {selectedInvoice && (
-            <div className="space-y-6" id="invoice-content">
-              {/* ترويسة الفاتورة الاحترافية - تظهر في الطباعة فقط */}
-              <div className="hidden print:block border-b-2 border-primary pb-6 mb-6">
-                <div className="flex justify-between items-start">
+            <div className="space-y-6 print:space-y-0" id="invoice-content">
+              {/* قالب الفاتورة الاحترافي للطباعة */}
+              <div className="print:p-12 print:text-black print:bg-white min-h-full flex flex-col">
+                {/* الترويسة */}
+                <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-8">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-bold text-gray-900">مؤسسة سمو الأمجاد للتجارة</h1>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>مكة المكرمة - حي الشرايع</p>
+                      <p>شارع محمد صالح باشراحيل</p>
+                    </div>
+                  </div>
+                  <div className="text-left space-y-1">
+                    <h2 className="text-2xl font-bold text-gray-800">فاتورة {selectedInvoice.type === 'sales' ? 'مبيعات' : 'مشتريات'}</h2>
+                    <p className="text-sm font-mono bg-gray-100 px-2 py-1 rounded inline-block">{selectedInvoice.invoice_number}</p>
+                    <p className="text-sm text-gray-600">{new Date(selectedInvoice.created_at).toLocaleDateString('ar-SA')}</p>
+                  </div>
+                </div>
+
+                {/* معلومات العميل والمحاسب */}
+                <div className="grid grid-cols-2 gap-8 mb-10 bg-gray-50 p-4 rounded-lg print:bg-gray-50">
                   <div className="space-y-1">
-                    <h1 className="text-2xl font-bold text-primary">مؤسسة سمو الأمجاد للتجارة</h1>
-                    <p className="text-sm text-muted-foreground">مكة المكرمة - حي الشرايع - شارع محمد صالح باشراحيل</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">العميل</p>
+                    <p className="text-lg font-bold text-gray-900">{selectedInvoice.client_name}</p>
                   </div>
-                  <div className="text-left">
-                    <h2 className="text-xl font-bold">فاتورة {selectedInvoice.type === 'sales' ? 'مبيعات' : 'مشتريات'}</h2>
-                    <p className="text-sm font-mono">{selectedInvoice.invoice_number}</p>
+                  <div className="space-y-1 text-left">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">المحاسب</p>
+                    <p className="text-lg font-bold text-gray-900">{selectedInvoice.accountant_name}</p>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">رقم الفاتورة:</p>
-                  <p className="font-mono font-bold">{selectedInvoice.invoice_number}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">التاريخ:</p>
-                  <p className="font-bold">{new Date(selectedInvoice.created_at).toLocaleDateString('ar-SA')}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">العميل:</p>
-                  <p className="font-bold">{selectedInvoice.client_name}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">المحاسب:</p>
-                  <p className="font-bold">{selectedInvoice.accountant_name}</p>
-                </div>
-              </div>
-
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted">
-                    <tr className="text-right">
-                      <th className="py-2 px-4">الوصف</th>
-                      <th className="py-2 px-4">الكمية</th>
-                      <th className="py-2 px-4">السعر</th>
-                      <th className="py-2 px-4">المجموع</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedInvoiceItems.map((item, index) => (
-                      <tr key={index} className="border-t">
-                        <td className="py-2 px-4">{item.description}</td>
-                        <td className="py-2 px-4">{item.quantity}</td>
-                        <td className="py-2 px-4">{formatCurrency(item.unit_price)}</td>
-                        <td className="py-2 px-4">{formatCurrency(item.total)}</td>
+                {/* جدول البنود */}
+                <div className="flex-grow mb-10">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-gray-800 text-white print:bg-gray-800 print:text-white">
+                        <th className="py-3 px-4 text-right rounded-tr-lg">الوصف</th>
+                        <th className="py-3 px-4 text-center">الكمية</th>
+                        <th className="py-3 px-4 text-center">السعر</th>
+                        <th className="py-3 px-4 text-left rounded-tl-lg">المجموع</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 border-b border-gray-200">
+                      {selectedInvoiceItems.map((item, index) => (
+                        <tr key={index} className="hover:bg-gray-50 transition-colors">
+                          <td className="py-4 px-4 font-medium text-gray-900">{item.description}</td>
+                          <td className="py-4 px-4 text-center text-gray-600">{item.quantity}</td>
+                          <td className="py-4 px-4 text-center text-gray-600">{formatCurrency(item.unit_price)}</td>
+                          <td className="py-4 px-4 text-left font-bold text-gray-900">{formatCurrency(item.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              <div className="flex flex-col items-end space-y-1">
-                <div className="flex justify-between w-48 text-sm">
-                  <span>المجموع:</span>
-                  <span>{formatCurrency(selectedInvoice.amount)}</span>
-                </div>
-                <div className="flex justify-between w-48 text-sm">
-                  <span>الضريبة (15%):</span>
-                  <span>{formatCurrency(selectedInvoice.tax_amount)}</span>
-                </div>
-                {selectedInvoice.shipping_fee > 0 && (
-                  <div className="flex justify-between w-48 text-sm">
-                    <span>رسوم التوصيل:</span>
-                    <span>{formatCurrency(selectedInvoice.shipping_fee)}</span>
+                {/* ملخص الحساب */}
+                <div className="flex justify-end mb-12">
+                  <div className="w-full max-w-xs space-y-3">
+                    <div className="flex justify-between text-gray-600">
+                      <span>المجموع الفرعي:</span>
+                      <span>{formatCurrency(selectedInvoice.amount)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>الضريبة (15%):</span>
+                      <span>{formatCurrency(selectedInvoice.tax_amount)}</span>
+                    </div>
+                    {selectedInvoice.shipping_fee > 0 && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>رسوم التوصيل:</span>
+                        <span>{formatCurrency(selectedInvoice.shipping_fee)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-2xl font-bold text-gray-900 border-t-2 border-gray-900 pt-3 mt-3">
+                      <span>الإجمالي:</span>
+                      <span>{formatCurrency(selectedInvoice.total_amount)}</span>
+                    </div>
                   </div>
-                )}
-                <div className="flex justify-between w-48 text-lg font-bold border-t pt-1">
-                  <span>الإجمالي:</span>
-                  <span>{formatCurrency(selectedInvoice.total_amount)}</span>
+                </div>
+
+                {/* التذييل والكلمة الطيبة */}
+                <div className="mt-auto pt-10 border-t border-gray-200 text-center space-y-4">
+                  <div className="bg-gray-900 text-white py-4 px-8 rounded-full inline-block print:bg-gray-900 print:text-white">
+                    <p className="text-xl font-bold">شكراً لثقتكم بنا، نسعد بخدمتكم دائماً</p>
+                  </div>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p>مؤسسة سمو الأمجاد للتجارة</p>
+                    <p>مكة المكرمة - حي الشرايع - شارع محمد صالح باشراحيل</p>
+                  </div>
                 </div>
               </div>
 
-              {/* تذييل الفاتورة والكلمة الطيبة */}
-              <div className="pt-8 mt-8 border-t text-center space-y-2">
-                <p className="text-lg font-bold text-primary">شكراً لثقتكم بنا، نسعد بخدمتكم دائماً</p>
-                <p className="text-xs text-muted-foreground hidden print:block">مؤسسة سمو الأمجاد للتجارة - مكة المكرمة</p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t print:hidden">
+              {/* أزرار التحكم - تختفي عند الطباعة */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t print:hidden px-6 pb-6">
                 <Button
                   variant="outline"
-                  className="flex-1 gap-2"
+                  className="flex-1 gap-2 h-12 text-lg font-bold border-2 hover:bg-primary hover:text-white transition-all"
                   onClick={() => {
                     window.print();
                   }}
                 >
-                  <Printer className="w-4 h-4" />
+                  <Printer className="w-5 h-5" />
                   تحميل الفاتورة (PDF)
                 </Button>
                 <div className="flex flex-1 gap-2">

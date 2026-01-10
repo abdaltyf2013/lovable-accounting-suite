@@ -502,12 +502,26 @@ export default function Invoices({ type }: InvoicesPageProps) {
       </Card>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl print:max-w-full print:fixed print:inset-0 print:bg-white print:m-0 print:p-8">
+          <DialogHeader className="print:hidden">
             <DialogTitle>تفاصيل الفاتورة</DialogTitle>
           </DialogHeader>
           {selectedInvoice && (
-            <div className="space-y-6">
+            <div className="space-y-6" id="invoice-content">
+              {/* ترويسة الفاتورة الاحترافية - تظهر في الطباعة فقط */}
+              <div className="hidden print:block border-b-2 border-primary pb-6 mb-6">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <h1 className="text-2xl font-bold text-primary">مؤسسة سمو الأمجاد للتجارة</h1>
+                    <p className="text-sm text-muted-foreground">مكة المكرمة - حي الشرايع - شارع محمد صالح باشراحيل</p>
+                  </div>
+                  <div className="text-left">
+                    <h2 className="text-xl font-bold">فاتورة {selectedInvoice.type === 'sales' ? 'مبيعات' : 'مشتريات'}</h2>
+                    <p className="text-sm font-mono">{selectedInvoice.invoice_number}</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">رقم الفاتورة:</p>
@@ -565,7 +579,13 @@ export default function Invoices({ type }: InvoicesPageProps) {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+              {/* تذييل الفاتورة والكلمة الطيبة */}
+              <div className="pt-8 mt-8 border-t text-center space-y-2">
+                <p className="text-lg font-bold text-primary">شكراً لثقتكم بنا، نسعد بخدمتكم دائماً</p>
+                <p className="text-xs text-muted-foreground hidden print:block">مؤسسة سمو الأمجاد للتجارة - مكة المكرمة</p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t print:hidden">
                 <Button
                   variant="outline"
                   className="flex-1 gap-2"
@@ -574,7 +594,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
                   }}
                 >
                   <Printer className="w-4 h-4" />
-                  طباعة الفاتورة
+                  تحميل الفاتورة (PDF)
                 </Button>
                 <div className="flex flex-1 gap-2">
                   <Button

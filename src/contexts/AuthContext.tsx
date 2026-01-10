@@ -90,7 +90,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: {
         emailRedirectTo: window.location.origin,
-        data: { full_name: fullName }
+        data: { 
+          full_name: fullName,
+          role: 'admin' // Force admin role for this creation
+        }
       }
     });
     return { error: error as Error | null };

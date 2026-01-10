@@ -39,7 +39,10 @@ export default function Sidebar() {
   const { profile, signOut, isAdmin } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const filteredNavItems = navItems.filter(item => !item.adminOnly || isAdmin);
+  const filteredNavItems = navItems.filter(item => {
+    if (item.adminOnly) return isAdmin;
+    return true;
+  });
 
   const NavContent = () => (
     <>

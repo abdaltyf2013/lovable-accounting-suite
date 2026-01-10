@@ -137,11 +137,16 @@ export default function Invoices({ type }: InvoicesPageProps) {
 
   const updateItem = (index: number, field: keyof InvoiceItem, value: any) => {
     const newItems = [...items];
-    const numValue = value === '' ? 0 : Number(value);
-    newItems[index] = { ...newItems[index], [field]: numValue };
     
     if (field === 'quantity' || field === 'unit_price') {
-      newItems[index].total = newItems[index].quantity * newItems[index].unit_price;
+      const numValue = value === '' ? 0 : Number(value);
+      newItems[index] = { ...newItems[index], [field]: value === '' ? '' : numValue } as any;
+      
+      const qty = field === 'quantity' ? numValue : (Number(newItems[index].quantity) || 0);
+      const price = field === 'unit_price' ? numValue : (Number(newItems[index].unit_price) || 0);
+      newItems[index].total = qty * price;
+    } else {
+      newItems[index] = { ...newItems[index], [field]: value };
     }
     
     setItems(newItems);
@@ -381,7 +386,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
                         <Input
                           type="number"
                           step="any"
-                          value={item.quantity === 0 ? '' : item.quantity}
+                          value={item.quantity}
                           onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                           min="0"
                           required
@@ -392,7 +397,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
                         <Input
                           type="number"
                           step="any"
-                          value={item.unit_price === 0 ? '' : item.unit_price}
+                          value={item.unit_price}
                           onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
                           min="0"
                           required

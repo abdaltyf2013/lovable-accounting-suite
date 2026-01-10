@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { History, User, Calendar, DollarSign, Clock } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Settlement {
   accountant_name: string;
@@ -12,15 +13,24 @@ interface Settlement {
 }
 
 const SettlementsLog = () => {
+  const { profile, isAdmin } = useAuth();
+  
   const { data: settlements, isLoading } = useQuery({
-    queryKey: ["settlements-log"],
+    queryKey: ["settlements-log", profile?.id],
     queryFn: async () => {
       // جلب الفواتير التي تم تمييزها كـ [SETTLED]
-      const { data, error } = await supabase
+      let query = supabase
         .from("invoices")
         .select("accountant_name, total_amount, created_at, notes, status")
         .eq("status", "cancelled")
         .like("notes", "[SETTLED_%");
+
+      // إذا لم يكن مديراً، نفلتر حسب اسمه فقط
+      if (!isAdmin && profile?.full_name) {
+        query = query.eq("accountant_name", profile.full_name);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 

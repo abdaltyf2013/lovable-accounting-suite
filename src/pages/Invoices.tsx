@@ -332,8 +332,9 @@ export default function Invoices({ type }: InvoicesPageProps) {
                   <Label>رسوم التوصيل (اختياري)</Label>
                   <Input
                     type="number"
-                    value={formData.shipping_fee}
-                    onChange={(e) => setFormData({ ...formData, shipping_fee: Number(e.target.value) })}
+                    step="any"
+                    value={formData.shipping_fee === 0 ? '' : formData.shipping_fee}
+                    onChange={(e) => setFormData({ ...formData, shipping_fee: e.target.value === '' ? 0 : Number(e.target.value) })}
                     placeholder="0.00"
                   />
                 </div>
@@ -373,24 +374,25 @@ export default function Invoices({ type }: InvoicesPageProps) {
                     </div>
                     <div className="md:col-span-2 space-y-2">
                       <Label className="text-xs">الكمية</Label>
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                        min="1"
-                        required
-                      />
+                        <Input
+                          type="number"
+                          step="any"
+                          value={item.quantity === 0 ? '' : item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', e.target.value === '' ? 0 : Number(e.target.value))}
+                          min="0.01"
+                          required
+                        />
                     </div>
                     <div className="md:col-span-2 space-y-2">
                       <Label className="text-xs">السعر</Label>
-                      <Input
-                        type="number"
-                        value={item.unit_price}
-                        onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                        min="0"
-                        step="0.01"
-                        required
-                      />
+                        <Input
+                          type="number"
+                          step="any"
+                          value={item.unit_price === 0 ? '' : item.unit_price}
+                          onChange={(e) => updateItem(index, 'unit_price', e.target.value === '' ? 0 : Number(e.target.value))}
+                          min="0"
+                          required
+                        />
                     </div>
                     <div className="md:col-span-2 space-y-2">
                       <Label className="text-xs">المجموع</Label>

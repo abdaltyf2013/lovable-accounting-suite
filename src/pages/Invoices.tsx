@@ -73,7 +73,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
     client_id: '',
     client_name: '',
     notes: '',
-    status: 'pending' as 'pending' | 'paid' | 'cancelled',
+    status: 'paid' as 'pending' | 'paid' | 'cancelled',
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -238,7 +238,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
   };
 
   const resetForm = () => {
-    setFormData({ client_id: '', client_name: '', notes: '', status: 'pending' });
+    setFormData({ client_id: '', client_name: '', notes: '', status: 'paid' });
     setItems([{ description: '', quantity: 1, unit_price: 0, total: 0 }]);
     setIncludeTax(true);
     setDialogOpen(false);

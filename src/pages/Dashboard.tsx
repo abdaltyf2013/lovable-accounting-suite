@@ -33,9 +33,14 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      
       const [clientsRes, invoicesRes] = await Promise.all([
         supabase.from('clients').select('id', { count: 'exact' }),
-        supabase.from('invoices').select('*'),
+        supabase.from('invoices')
+          .select('*')
+          .gte('created_at', firstDayOfMonth), // فلترة الشهر الحالي
       ]);
 
       const invoices = invoicesRes.data || [];

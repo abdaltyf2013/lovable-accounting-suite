@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/button";
-import { Trophy, User, Star, TrendingUp } from "lucide-react";
+import { Trophy, Star, TrendingUp, Calendar } from "lucide-react";
+import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AccountantStats {
   accountant_name: string;
@@ -10,13 +11,20 @@ interface AccountantStats {
 }
 
 const AccountantsRanking = () => {
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+
   const { data: ranking, isLoading } = useQuery({
-    queryKey: ["accountants-ranking"],
+    queryKey: ["accountants-ranking", selectedMonth],
     queryFn: async () => {
+      const startOfMonth = new Date(selectedMonth + "-01").toISOString();
+      const endOfMonth = new Date(new Date(selectedMonth + "-01").getFullYear(), new Date(selectedMonth + "-01").getMonth() + 1, 0, 23, 59, 59).toISOString();
+
       const { data, error } = await supabase
         .from("invoices")
-        .select("accountant_name, total_amount, type")
-        .eq("type", "sales"); // الاعتماد على المبيعات فقط
+        .select("accountant_name, total_amount, type, created_at")
+        .eq("type", "sales")
+        .gte("created_at", startOfMonth)
+        .lte("created_at", endOfMonth);
 
       if (error) throw error;
 
@@ -36,13 +44,35 @@ const AccountantsRanking = () => {
 
   if (isLoading) return <div className="p-8 text-center">جاري تحميل الترتيب...</div>;
 
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    return d.toISOString().slice(0, 7);
+  });
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Trophy className="w-6 h-6 text-yellow-500" />
           ترتيب المحاسبين
         </h1>
+
+        <div className="flex items-center gap-2 bg-card p-2 rounded-lg border shadow-sm">
+          <Calendar className="w-4 h-4 text-muted-foreground" />
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[180px] border-none shadow-none focus:ring-0">
+              <SelectValue placeholder="اختر الشهر" />
+            </SelectTrigger>
+            <SelectContent>
+              {months.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {new Date(m).toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4">

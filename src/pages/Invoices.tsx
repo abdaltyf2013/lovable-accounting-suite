@@ -82,7 +82,6 @@ export default function Invoices({ type }: InvoicesPageProps) {
     client_name: '',
     notes: '',
     shipping_fee: 0,
-    payment_method: 'كاش',
     status: 'paid' as 'pending' | 'paid' | 'cancelled',
   });
 
@@ -179,7 +178,6 @@ export default function Invoices({ type }: InvoicesPageProps) {
         tax_amount: tax,
         total_amount: total,
         shipping_fee: Number(formData.shipping_fee) || 0,
-        payment_method: formData.payment_method,
         status: formData.status,
         notes: formData.notes,
         accountant_name: profile?.full_name || user.email,

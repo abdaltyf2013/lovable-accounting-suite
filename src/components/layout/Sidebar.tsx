@@ -38,6 +38,7 @@ const navItems: NavItem[] = [
   { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, adminOnly: true },
   { title: 'سجل التصفيات', href: '/settlements', icon: History },
   { title: 'سجل الرقابة', href: '/audit-log', icon: ShieldCheck, adminOnly: true },
+  { title: 'الإعدادات', href: '/settings', icon: Settings, adminOnly: true },
 ];
 
 export default function Sidebar() {

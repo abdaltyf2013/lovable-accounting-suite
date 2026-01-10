@@ -34,10 +34,8 @@ interface Invoice {
   tax_amount: number;
   total_amount: number;
   shipping_fee: number;
-  status: 'pending' | 'paid' | 'cancelled';
-  notes: string | null;
-  accountant_name: string | null;
-  created_at: string;
+  status: 'pending' | 'paid' | 'cancelled';  payment_method: string;
+  accountant_name: string | null;  created_at: string;
 }
 
 interface InvoiceItem {
@@ -82,6 +80,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
     client_name: '',
     notes: '',
     shipping_fee: 0,
+    payment_method: 'كاش',
     status: 'paid' as 'pending' | 'paid' | 'cancelled',
   });
 
@@ -90,12 +89,25 @@ export default function Invoices({ type }: InvoicesPageProps) {
   ]);
 
   const [includeTax, setIncludeTax] = useState(true);
+  const [taxEnabledByAdmin, setTaxEnabledByAdmin] = useState(true);
   const TAX_RATE = 0.15; // 15% VAT
 
   useEffect(() => {
     fetchInvoices();
     fetchClients();
+    fetchSettings();
   }, [type]);
+
+  const fetchSettings = async () => {
+    const { data } = await supabase.from('settings').select('*');
+    if (data) {
+      const taxSetting = data.find(s => s.key === 'tax_enabled');
+      if (taxSetting) {
+        setTaxEnabledByAdmin(taxSetting.value);
+        setIncludeTax(taxSetting.value);
+      }
+    }
+  };
 
   const fetchInvoices = async () => {
     const { data, error } = await supabase
@@ -160,6 +172,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
         tax_amount: tax,
         total_amount: total,
         shipping_fee: Number(formData.shipping_fee) || 0,
+        payment_method: formData.payment_method,
         status: formData.status,
         notes: formData.notes,
         accountant_name: profile?.full_name || user.email,
@@ -323,6 +336,19 @@ export default function Invoices({ type }: InvoicesPageProps) {
                     onChange={(e) => setFormData({ ...formData, shipping_fee: Number(e.target.value) })}
                     placeholder="0.00"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>طريقة الدفع</Label>
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={formData.payment_method}
+                    onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                  >
+                    <option value="كاش">كاش</option>
+                    <option value="شبكة">شبكة</option>
+                    <option value="تحويل بنكي أهلي">تحويل بنكي أهلي</option>
+                    <option value="تحويل بنكي راجحي">تحويل بنكي راجحي</option>
+                  </select>
                 </div>
               </div>
 
@@ -541,10 +567,14 @@ export default function Invoices({ type }: InvoicesPageProps) {
                 </div>
 
                 {/* معلومات العميل والمحاسب */}
-                <div className="grid grid-cols-2 gap-8 mb-10 bg-gray-50 p-4 rounded-lg print:bg-gray-50">
+                <div className="grid grid-cols-3 gap-4 mb-10 bg-gray-50 p-4 rounded-lg print:bg-gray-50">
                   <div className="space-y-1">
                     <p className="text-xs text-gray-500 uppercase tracking-wider">العميل</p>
                     <p className="text-lg font-bold text-gray-900">{selectedInvoice.client_name}</p>
+                  </div>
+                  <div className="space-y-1 text-center">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">طريقة الدفع</p>
+                    <p className="text-lg font-bold text-gray-900">{selectedInvoice.payment_method || 'كاش'}</p>
                   </div>
                   <div className="space-y-1 text-left">
                     <p className="text-xs text-gray-500 uppercase tracking-wider">المحاسب</p>

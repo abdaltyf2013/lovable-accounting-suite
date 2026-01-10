@@ -594,7 +594,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
                     onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
                     disabled={selectedInvoice.status === 'cancelled'}
                   >
-                    إلغاء
+                    إلغاء الفاتورة
                   </Button>
                 </div>
               </div>

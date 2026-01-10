@@ -159,6 +159,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
         status: formData.status,
         notes: formData.notes,
         accountant_name: profile?.full_name || user.email,
+        created_by: user.id,
       })
       .select()
       .single();

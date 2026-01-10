@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Users, TrendingUp, TrendingDown, DollarSign, ShoppingCart } from 'lucide-react';
+import { FileText, Users, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Trophy, History } from 'lucide-react';
 
 interface Stats {
   totalClients: number;
@@ -11,6 +11,9 @@ interface Stats {
   totalSalesAmount: number;
   totalPurchaseAmount: number;
   pendingInvoices: number;
+  todaySales: number;
+  myRank?: number;
+  totalSettled?: number;
 }
 
 export default function Dashboard() {
@@ -34,18 +37,55 @@ export default function Dashboard() {
   const fetchStats = async () => {
     try {
       const now = new Date();
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const startOfDay = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
       
+      let invoicesQuery = supabase.from('invoices').select('*').gte('created_at', firstDayOfMonth);
+      
+      // إذا لم يكن مديراً، نفلتر إحصائياته هو فقط
+      if (!isAdmin && profile?.full_name) {
+        invoicesQuery = invoicesQuery.eq('accountant_name', profile.full_name);
+      }
+
       const [clientsRes, invoicesRes] = await Promise.all([
         supabase.from('clients').select('id', { count: 'exact' }),
-        supabase.from('invoices')
-          .select('*')
-          .gte('created_at', firstDayOfMonth), // فلترة الشهر الحالي
+        invoicesQuery,
       ]);
 
       const invoices = invoicesRes.data || [];
-      const salesInvoices = invoices.filter(i => i.type === 'sales');
-      const purchaseInvoices = invoices.filter(i => i.type === 'purchase');
+      const salesInvoices = invoices.filter(i => i.type === 'sales' && i.status !== 'cancelled');
+      const purchaseInvoices = invoices.filter(i => i.type === 'purchase' && i.status !== 'cancelled');
+      const todaySales = salesInvoices.filter(i => i.created_at >= startOfDay).reduce((sum, i) => sum + Number(i.total_amount), 0);
+
+      let myRank = 0;
+      let totalSettled = 0;
+
+      if (!isAdmin && profile?.full_name) {
+        // جلب الترتيب
+        const { data: rankingData } = await supabase
+          .from('invoices')
+          .select('accountant_name, total_amount')
+          .eq('type', 'sales')
+          .neq('status', 'cancelled')
+          .gte('created_at', firstDayOfMonth);
+        
+        const ranking = (rankingData || []).reduce((acc: any, curr) => {
+          acc[curr.accountant_name] = (acc[curr.accountant_name] || 0) + Number(curr.total_amount);
+          return acc;
+        }, {});
+        
+        const sortedRanking = Object.entries(ranking).sort((a: any, b: any) => b[1] - a[1]);
+        myRank = sortedRanking.findIndex(r => r[0] === profile.full_name) + 1;
+
+        // جلب إجمالي المصفى
+        const { data: settledData } = await supabase
+          .from('invoices')
+          .select('total_amount')
+          .eq('accountant_name', profile.full_name)
+          .eq('status', 'cancelled')
+          .like('notes', '[SETTLED_%');
+        totalSettled = (settledData || []).reduce((sum, i) => sum + Number(i.total_amount), 0);
+      }
 
       setStats({
         totalClients: clientsRes.count || 0,
@@ -54,6 +94,9 @@ export default function Dashboard() {
         totalSalesAmount: salesInvoices.reduce((sum, i) => sum + Number(i.total_amount), 0),
         totalPurchaseAmount: purchaseInvoices.reduce((sum, i) => sum + Number(i.total_amount), 0),
         pendingInvoices: invoices.filter(i => i.status === 'pending').length,
+        todaySales,
+        myRank,
+        totalSettled,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -78,13 +121,20 @@ export default function Dashboard() {
     }).format(amount);
   };
 
-  const statCards = [
+  const statCards = isAdmin ? [
     {
-      title: 'إجمالي المبيعات',
+      title: 'إجمالي مبيعات الشهر',
       value: formatCurrency(stats.totalSalesAmount),
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
+    },
+    {
+      title: 'مبيعات اليوم',
+      value: formatCurrency(stats.todaySales),
+      icon: DollarSign,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
     },
     {
       title: 'إجمالي المشتريات',
@@ -94,32 +144,54 @@ export default function Dashboard() {
       bgColor: 'bg-red-100',
     },
     {
-      title: 'فواتير المبيعات',
+      title: 'عدد الفواتير',
       value: stats.totalSalesInvoices.toString(),
       icon: FileText,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-    },
-    {
-      title: 'فواتير المشتريات',
-      value: stats.totalPurchaseInvoices.toString(),
-      icon: ShoppingCart,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
-    },
-    {
-      title: 'العملاء',
-      value: stats.totalClients.toString(),
-      icon: Users,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100',
     },
     {
-      title: 'فواتير معلقة',
-      value: stats.pendingInvoices.toString(),
+      title: 'إجمالي العملاء',
+      value: stats.totalClients.toString(),
+      icon: Users,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100',
+    },
+  ] : [
+    {
+      title: 'مبيعاتي هذا الشهر',
+      value: formatCurrency(stats.totalSalesAmount),
+      icon: TrendingUp,
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
+    },
+    {
+      title: 'مبيعاتي اليوم',
+      value: formatCurrency(stats.todaySales),
       icon: DollarSign,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
+    },
+    {
+      title: 'ترتيبي الحالي',
+      value: stats.myRank ? `#${stats.myRank}` : '-',
+      icon: Trophy,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100',
+    },
+    {
+      title: 'فواتيري المصدرة',
+      value: stats.totalSalesInvoices.toString(),
+      icon: FileText,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100',
+    },
+    {
+      title: 'إجمالي ما تم تسليمه',
+      value: formatCurrency(stats.totalSettled || 0),
+      icon: History,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100',
     },
   ];
 

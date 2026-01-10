@@ -20,7 +20,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename="/lovable-accounting-suite">
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />

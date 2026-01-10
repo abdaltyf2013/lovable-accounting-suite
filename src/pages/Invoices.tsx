@@ -33,6 +33,7 @@ interface Invoice {
   amount: number;
   tax_amount: number;
   total_amount: number;
+  shipping_fee: number;
   status: 'pending' | 'paid' | 'cancelled';
   notes: string | null;
   accountant_name: string | null;
@@ -80,6 +81,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
     client_id: '',
     client_name: '',
     notes: '',
+    shipping_fee: 0,
     status: 'paid' as 'pending' | 'paid' | 'cancelled',
   });
 
@@ -136,7 +138,8 @@ export default function Invoices({ type }: InvoicesPageProps) {
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const tax = includeTax ? subtotal * TAX_RATE : 0;
-    return { subtotal, tax, total: subtotal + tax };
+    const shipping = Number(formData.shipping_fee) || 0;
+    return { subtotal, tax, total: subtotal + tax + shipping };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -156,6 +159,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
         amount: subtotal,
         tax_amount: tax,
         total_amount: total,
+        shipping_fee: Number(formData.shipping_fee) || 0,
         status: formData.status,
         notes: formData.notes,
         accountant_name: profile?.full_name || user.email,
@@ -209,6 +213,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
       client_id: '',
       client_name: '',
       notes: '',
+      shipping_fee: 0,
       status: 'paid',
     });
     setItems([{ description: '', quantity: 1, unit_price: 0, total: 0 }]);
@@ -308,6 +313,15 @@ export default function Invoices({ type }: InvoicesPageProps) {
                     onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
                     placeholder="أدخل اسم العميل"
                     required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>رسوم التوصيل (اختياري)</Label>
+                  <Input
+                    type="number"
+                    value={formData.shipping_fee}
+                    onChange={(e) => setFormData({ ...formData, shipping_fee: Number(e.target.value) })}
+                    placeholder="0.00"
                   />
                 </div>
               </div>
@@ -573,6 +587,12 @@ export default function Invoices({ type }: InvoicesPageProps) {
                   <span>الضريبة (15%):</span>
                   <span>{formatCurrency(selectedInvoice.tax_amount)}</span>
                 </div>
+                {selectedInvoice.shipping_fee > 0 && (
+                  <div className="flex justify-between w-48 text-sm">
+                    <span>رسوم التوصيل:</span>
+                    <span>{formatCurrency(selectedInvoice.shipping_fee)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between w-48 text-lg font-bold border-t pt-1">
                   <span>الإجمالي:</span>
                   <span>{formatCurrency(selectedInvoice.total_amount)}</span>

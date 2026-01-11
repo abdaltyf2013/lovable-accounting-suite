@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Eye, Trash2, FileText, Printer } from 'lucide-react';
 import InvoicePrintTemplate from '@/components/InvoicePrintTemplate';
+import { renderToString } from 'react-dom/server';
 
 interface Invoice {
   id: string;
@@ -35,8 +36,9 @@ interface Invoice {
   tax_amount: number;
   total_amount: number;
   shipping_fee: number;
-  status: 'pending' | 'paid' | 'cancelled';  payment_method: string;
-  accountant_name: string | null;  created_at: string;
+  status: 'pending' | 'paid' | 'cancelled';
+  accountant_name: string | null;
+  created_at: string;
 }
 
 interface InvoiceItem {
@@ -244,9 +246,56 @@ export default function Invoices({ type }: InvoicesPageProps) {
     setSelectedInvoice(invoice);
     setSelectedInvoiceItems(data || []);
     setViewDialogOpen(true);
-    setTimeout(() => {
-      window.print();
-    }, 500);
+  };
+
+  const handlePrint = () => {
+    if (!selectedInvoice || !selectedInvoiceItems) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى السماح بالنوافذ المنبثقة للطباعة',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // استخراج محتوى الفاتورة كـ HTML
+    const invoiceHtml = renderToString(
+      <InvoicePrintTemplate 
+        invoice={selectedInvoice} 
+        items={selectedInvoiceItems} 
+      />
+    );
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>طباعة فاتورة - ${selectedInvoice.invoice_number}</title>
+          <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+          <style>
+            @page { size: A4; margin: 10mm; }
+            body { margin: 0; padding: 0; background: white !important; }
+            .invoice-container { width: 100%; max-width: 210mm; margin: 0 auto; }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-container">
+            ${invoiceHtml}
+          </div>
+          <script>
+            window.onload = () => {
+              setTimeout(() => {
+                window.print();
+                window.onafterprint = () => window.close();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const handleDelete = async (id: string) => {
@@ -326,357 +375,229 @@ export default function Invoices({ type }: InvoicesPageProps) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>اسم العميل (يدوي)</Label>
+                  <Label>اسم العميل (في حال عدم وجوده في القائمة)</Label>
                   <Input
                     value={formData.client_name}
                     onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                    placeholder="أدخل اسم العميل"
-                    required
+                    placeholder="اسم العميل"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>رسوم التوصيل (اختياري)</Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    value={formData.shipping_fee === 0 ? '' : formData.shipping_fee}
-                    onChange={(e) => setFormData({ ...formData, shipping_fee: e.target.value === '' ? 0 : Number(e.target.value) })}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>طريقة الدفع</Label>
-                  <select 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={formData.payment_method}
-                    onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-                  >
-                    <option value="كاش">كاش</option>
-                    <option value="شبكة">شبكة</option>
-                    <option value="تحويل بنكي أهلي">تحويل بنكي أهلي</option>
-                    <option value="تحويل بنكي راجحي">تحويل بنكي راجحي</option>
-                  </select>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label className="text-lg font-bold">البنود</Label>
+                  <Label className="text-lg font-bold">بنود الفاتورة</Label>
                   <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
                     إضافة بند
                   </Button>
                 </div>
                 
                 {items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-muted/30 p-3 rounded-lg">
-                    <div className="md:col-span-5 space-y-2">
-                      <Label className="text-xs">الوصف</Label>
-                        <Input
-                          value={item.description}
-                          onChange={(e) => {
-                            const newItems = [...items];
-                            newItems[index] = { ...newItems[index], description: e.target.value };
-                            setItems(newItems);
-                          }}
-                          placeholder="وصف الخدمة أو المنتج"
-                          required
-                        />
-                    </div>
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg relative">
                     <div className="md:col-span-2 space-y-2">
-                      <Label className="text-xs">الكمية</Label>
-                        <Input
-                          type="number"
-                          step="any"
-                          value={item.quantity}
-                          onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                          min="0"
-                          required
-                        />
+                      <Label>الوصف</Label>
+                      <Input
+                        value={item.description}
+                        onChange={(e) => updateItem(index, 'description', e.target.value)}
+                        placeholder="وصف الخدمة أو المنتج"
+                        required
+                      />
                     </div>
-                    <div className="md:col-span-2 space-y-2">
-                      <Label className="text-xs">السعر</Label>
-                        <Input
-                          type="number"
-                          step="any"
-                          value={item.unit_price}
-                          onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                          min="0"
-                          required
-                        />
+                    <div className="space-y-2">
+                      <Label>الكمية</Label>
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                        min="1"
+                        required
+                      />
                     </div>
-                    <div className="md:col-span-2 space-y-2">
-                      <Label className="text-xs">المجموع</Label>
-                      <div className="h-10 flex items-center px-3 bg-muted rounded-md text-sm font-medium">
-                        {formatCurrency(item.total)}
-                      </div>
+                    <div className="space-y-2">
+                      <Label>السعر</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.unit_price}
+                        onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                        required
+                      />
                     </div>
-                    <div className="md:col-span-1">
+                    {items.length > 1 && (
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="destructive"
                         size="icon"
-                        className="text-destructive"
+                        className="absolute -top-2 -left-2 w-6 h-6 rounded-full"
                         onClick={() => handleRemoveItem(index)}
-                        disabled={items.length === 1}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3" />
                       </Button>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
 
-              <div className="flex flex-col md:flex-row justify-between gap-6 pt-4 border-t">
-                <div className="space-y-4 flex-1">
-                  <div className="flex items-center space-x-2 space-x-reverse">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label>تضمين ضريبة القيمة المضافة (15%)</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {taxEnabledByAdmin ? 'سيتم إضافة الضريبة تلقائياً' : 'الضريبة معطلة من الإعدادات'}
+                      </p>
+                    </div>
                     <Switch
-                      id="tax"
                       checked={includeTax}
                       onCheckedChange={setIncludeTax}
+                      disabled={!taxEnabledByAdmin}
                     />
-                    <Label htmlFor="tax">إضافة ضريبة القيمة المضافة (15%)</Label>
                   </div>
                   <div className="space-y-2">
-                    <Label>ملاحظات</Label>
-                    <Textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="أي ملاحظات إضافية..."
-                    />
+                    <Label>حالة الدفع</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="paid">مدفوعة</SelectItem>
+                        <SelectItem value="pending">معلقة</SelectItem>
+                        <SelectItem value="cancelled">ملغاة</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                
-                <div className="w-full md:w-64 space-y-2 bg-muted/50 p-4 rounded-lg">
-                  <div className="flex justify-between text-sm">
-                    <span>المجموع الفرعي:</span>
-                    <span>{formatCurrency(calculateTotals().subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>الضريبة:</span>
-                    <span>{formatCurrency(calculateTotals().tax)}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
-                    <span>الإجمالي:</span>
-                    <span>{formatCurrency(calculateTotals().total)}</span>
-                  </div>
-                </div>
+
+                <Card>
+                  <CardContent className="pt-6 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>المجموع الفرعي:</span>
+                      <span>{formatCurrency(calculateTotals().subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>الضريبة:</span>
+                      <span>{formatCurrency(calculateTotals().tax)}</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-bold border-t pt-2">
+                      <span>الإجمالي:</span>
+                      <span>{formatCurrency(calculateTotals().total)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  إلغاء
-                </Button>
-                <Button type="submit">حفظ الفاتورة</Button>
+              <div className="space-y-2">
+                <Label>ملاحظات</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="أي ملاحظات إضافية..."
+                />
               </div>
+
+              <Button type="submit" className="w-full">حفظ الفاتورة</Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="البحث برقم الفاتورة أو اسم العميل..."
-              className="pr-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b text-right">
-                  <th className="py-3 px-4 font-medium text-muted-foreground">رقم الفاتورة</th>
-                  <th className="py-3 px-4 font-medium text-muted-foreground">التاريخ</th>
-                  <th className="py-3 px-4 font-medium text-muted-foreground">العميل</th>
-                  <th className="py-3 px-4 font-medium text-muted-foreground">المبلغ</th>
-                  <th className="py-3 px-4 font-medium text-muted-foreground">المحاسب</th>
-                  <th className="py-3 px-4 font-medium text-muted-foreground">الحالة</th>
-                  <th className="py-3 px-4 font-medium text-muted-foreground">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-muted-foreground">جاري التحميل...</td>
-                  </tr>
-                ) : filteredInvoices.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-muted-foreground">لا توجد فواتير</td>
-                  </tr>
-                ) : (
-                  filteredInvoices.map((invoice) => (
-                    <tr key={invoice.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
-                      <td className="py-3 px-4 font-mono text-sm">{invoice.invoice_number}</td>
-                      <td className="py-3 px-4 text-sm">{new Date(invoice.created_at).toLocaleDateString('ar-SA')}</td>
-                      <td className="py-3 px-4">{invoice.client_name}</td>
-                      <td className="py-3 px-4 font-medium">{formatCurrency(Number(invoice.total_amount))}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{invoice.accountant_name || '-'}</td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                          invoice.status === 'paid'
-                            ? 'bg-green-100 text-green-700'
-                            : invoice.status === 'cancelled'
-                            ? (invoice.notes?.includes('[SETTLED_') ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700')
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {invoice.status === 'paid' ? 'مدفوعة' : (invoice.status === 'cancelled' && invoice.notes?.includes('[SETTLED_') ? 'تمت المحاسبة' : invoice.status === 'cancelled' ? 'ملغاة' : 'معلقة')}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewInvoice(invoice)}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {!isAdmin && canEdit(invoice.created_at) && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => handleViewInvoice(invoice)}>
-                              <FileText className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {isAdmin && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(invoice.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-4 bg-card p-4 rounded-lg border shadow-sm">
+        <Search className="w-5 h-5 text-muted-foreground" />
+        <Input
+          placeholder="البحث برقم الفاتورة أو اسم العميل..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border-none focus-visible:ring-0"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        {loading ? (
+          <div className="text-center py-10">جاري التحميل...</div>
+        ) : filteredInvoices.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground">لا توجد فواتير</div>
+        ) : (
+          filteredInvoices.map((invoice) => (
+            <Card key={invoice.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <FileText className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-bold">{invoice.invoice_number}</div>
+                    <div className="text-sm text-muted-foreground">{invoice.client_name}</div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="text-right">
+                    <div className="font-bold text-primary">{formatCurrency(invoice.total_amount)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(invoice.created_at).toLocaleDateString('ar-SA')}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleViewInvoice(invoice)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    {canEdit(invoice.created_at) && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleDelete(invoice.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl print:max-w-full print:fixed print:inset-0 print:bg-white print:m-0 print:p-0 print:shadow-none print:border-none">
-          <DialogHeader className="print:hidden">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle>تفاصيل الفاتورة</DialogTitle>
+            <Button onClick={handlePrint} className="gap-2 ml-4">
+              <Printer className="w-4 h-4" />
+              طباعة الفاتورة
+            </Button>
           </DialogHeader>
+          
           {selectedInvoice && (
-            <div className="space-y-6 print:space-y-0">
-              {/* عرض المعاينة في المتصفح */}
-              <div className="print:hidden space-y-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                      {selectedInvoice.type === 'sales' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}
-                    </h2>
-                    <p className="text-gray-500 font-mono">{selectedInvoice.invoice_number}</p>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm text-gray-500 mb-1">تاريخ الإصدار</p>
-                    <p className="font-bold">{new Date(selectedInvoice.created_at).toLocaleDateString('ar-SA')}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-8 p-6 bg-gray-50 rounded-xl border border-gray-100">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">معلومات العميل</p>
-                    <p className="text-xl font-bold text-gray-900">{selectedInvoice.client_name}</p>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm text-gray-500 mb-2">حالة الفاتورة</p>
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
-                      selectedInvoice.status === 'paid' 
-                        ? 'bg-green-100 text-green-700' 
-                        : selectedInvoice.status === 'cancelled'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {selectedInvoice.status === 'paid' ? 'مدفوعة' : selectedInvoice.status === 'cancelled' ? 'ملغاة' : 'معلقة'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="overflow-hidden border border-gray-200 rounded-xl">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-900 text-white">
-                        <th className="py-3 px-4 text-right rounded-tr-lg">الوصف</th>
-                        <th className="py-3 px-4 text-center">الكمية</th>
-                        <th className="py-3 px-4 text-center">السعر</th>
-                        <th className="py-3 px-4 text-left rounded-tl-lg">المجموع</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 border-b border-gray-200">
-                      {selectedInvoiceItems.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50 transition-colors">
-                          <td className="py-4 px-4 font-medium text-gray-900">{item.description}</td>
-                          <td className="py-4 px-4 text-center text-gray-600">{item.quantity}</td>
-                          <td className="py-4 px-4 text-center text-gray-600">{formatCurrency(item.unit_price)}</td>
-                          <td className="py-4 px-4 text-left font-bold text-gray-900">{formatCurrency(item.total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex justify-end">
-                  <div className="w-full max-w-xs space-y-3">
-                    <div className="flex justify-between text-gray-600">
-                      <span>المجموع الفرعي:</span>
-                      <span>{formatCurrency(selectedInvoice.amount)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>الضريبة (15%):</span>
-                      <span>{formatCurrency(selectedInvoice.tax_amount)}</span>
-                    </div>
-
-                    <div className="flex justify-between text-2xl font-bold text-gray-900 border-t-2 border-gray-900 pt-3 mt-3">
-                      <span>الإجمالي:</span>
-                      <span>{formatCurrency(selectedInvoice.total_amount)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* قالب الطباعة الفعلي الذي يظهر فقط عند الطباعة */}
-              <div className="hidden print:block">
+            <div className="space-y-6">
+              <div className="bg-muted p-4 rounded-lg">
                 <InvoicePrintTemplate 
-                  ref={printRef} 
                   invoice={selectedInvoice} 
                   items={selectedInvoiceItems} 
                 />
               </div>
-
-              {/* أزرار التحكم - تختفي عند الطباعة */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t print:hidden px-6 pb-6">
-                <Button
-                  variant="outline"
-                  className="flex-1 gap-2 h-12 text-lg font-bold border-2 hover:bg-primary hover:text-white transition-all"
-                  onClick={() => {
-                    window.print();
-                  }}
-                >
-                  <Printer className="w-5 h-5" />
-                  تحميل الفاتورة (PDF)
-                </Button>
-                <div className="flex flex-1 gap-2">
-                  <Button
-                    variant="secondary"
-                    className="flex-1 bg-green-100 text-green-700 hover:bg-green-200"
+              
+              <div className="flex justify-end gap-2">
+                {selectedInvoice.status === 'pending' && (
+                  <Button 
                     onClick={() => handleUpdateStatus(selectedInvoice.id, 'paid')}
-                    disabled={selectedInvoice.status === 'paid'}
+                    className="bg-green-600 hover:bg-green-700"
                   >
                     تحديد كمدفوعة
                   </Button>
-                  {isAdmin && (
-                    <Button
-                      variant="destructive"
-                      className="flex-1"
-                      onClick={() => handleUpdateStatus(selectedInvoice.id, 'cancelled')}
-                      disabled={selectedInvoice.status === 'cancelled'}
-                    >
-                      إلغاء الفاتورة
-                    </Button>
-                  )}
-                </div>
+                )}
+                <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+                  إغلاق
+                </Button>
               </div>
             </div>
           )}

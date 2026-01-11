@@ -157,7 +157,7 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
           <div className="flex justify-center gap-12 text-sm text-gray-400 font-bold uppercase tracking-widest">
             <span>تاريخ الطباعة: {printDate}</span>
             <span>•</span>
-            <span>نظام رام ستور المحاسبي</span>
+<span>نظام المحاسبة</span>
           </div>
         </div>
       </div>

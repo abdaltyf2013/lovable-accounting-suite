@@ -35,9 +35,9 @@ interface Invoice {
   amount: number;
   tax_amount: number;
   total_amount: number;
-  shipping_fee: number;
   status: 'pending' | 'paid' | 'cancelled';
   accountant_name: string | null;
+  notes: string | null;
   created_at: string;
 }
 
@@ -97,17 +97,15 @@ export default function Invoices({ type }: InvoicesPageProps) {
   useEffect(() => {
     fetchInvoices();
     fetchClients();
-    fetchSettings();
+    loadTaxSetting();
   }, [type]);
 
-  const fetchSettings = async () => {
-    const { data } = await supabase.from('settings').select('*');
-    if (data) {
-      const taxSetting = data.find(s => s.key === 'tax_enabled');
-      if (taxSetting) {
-        setTaxEnabledByAdmin(taxSetting.value);
-        setIncludeTax(taxSetting.value);
-      }
+  const loadTaxSetting = () => {
+    const savedTax = localStorage.getItem('tax_enabled');
+    if (savedTax !== null) {
+      const isEnabled = savedTax === 'true';
+      setTaxEnabledByAdmin(isEnabled);
+      setIncludeTax(isEnabled);
     }
   };
 
@@ -119,7 +117,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setInvoices(data);
+      setInvoices(data as Invoice[]);
     }
     setLoading(false);
   };

@@ -18,7 +18,8 @@ import {
   History,
   ShieldCheck,
   Moon,
-  Sun
+  Sun,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -34,7 +35,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: 'لوحة التحكم', href: '/dashboard', icon: LayoutDashboard },
   { title: 'العملاء', href: '/clients', icon: Users },
-  { title: 'إدارة الديون', href: '/debts', icon: Bell, adminOnly: true },
   { title: 'فواتير المبيعات', href: '/sales', icon: FileText },
   { title: 'فواتير المشتريات', href: '/purchases', icon: ShoppingCart },
   { title: 'المحاسبين', href: '/accountants', icon: UserCircle, adminOnly: true },

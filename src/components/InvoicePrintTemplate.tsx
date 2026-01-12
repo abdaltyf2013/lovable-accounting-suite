@@ -15,9 +15,8 @@ interface Invoice {
   amount: number;
   tax_amount: number;
   total_amount: number;
-  shipping_fee: number;
   status: string;
-  notes: string | null;
+  notes?: string | null;
   accountant_name: string | null;
   created_at: string;
 }

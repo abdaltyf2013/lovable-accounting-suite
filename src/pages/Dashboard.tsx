@@ -25,6 +25,7 @@ export default function Dashboard() {
     totalSalesAmount: 0,
     totalPurchaseAmount: 0,
     pendingInvoices: 0,
+    todaySales: 0,
   });
   const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

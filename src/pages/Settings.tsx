@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -17,66 +15,47 @@ import { Settings as SettingsIcon, Moon, Sun, Percent } from 'lucide-react';
 export default function Settings() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
   const [taxEnabled, setTaxEnabled] = useState(true);
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    fetchSettings();
+    // تحميل الإعدادات من localStorage
+    const savedTax = localStorage.getItem('tax_enabled');
+    const savedTheme = localStorage.getItem('theme');
+    
+    if (savedTax !== null) {
+      setTaxEnabled(savedTax === 'true');
+    }
+    if (savedTheme) {
+      setThemeMode(savedTheme as 'light' | 'dark');
+    }
   }, []);
-
-  const fetchSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*');
-      
-      if (error) throw error;
-
-      data.forEach(setting => {
-        if (setting.key === 'tax_enabled') setTaxEnabled(setting.value);
-        if (setting.key === 'theme_mode') setThemeMode(setting.value);
-      });
-    } catch (error) {
-      console.error('Error fetching settings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateSetting = async (key: string, value: any) => {
-    try {
-      const { error } = await supabase
-        .from('settings')
-        .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-
-      if (error) throw error;
-
-      toast({
-        title: 'تم التحديث',
-        description: 'تم حفظ الإعدادات بنجاح',
-      });
-    } catch (error) {
-      console.error('Error updating setting:', error);
-      toast({
-        title: 'خطأ',
-        description: 'فشل في تحديث الإعدادات',
-        variant: 'destructive',
-      });
-    }
-  };
 
   const toggleTheme = (checked: boolean) => {
     const newMode = checked ? 'dark' : 'light';
     setThemeMode(newMode);
-    updateSetting('theme_mode', newMode);
+    localStorage.setItem('theme', newMode);
     
-    // تطبيق الوضع الليلي على مستوى الـ HTML
     if (checked) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+
+    toast({
+      title: 'تم التحديث',
+      description: 'تم حفظ الإعدادات بنجاح',
+    });
+  };
+
+  const toggleTax = (checked: boolean) => {
+    setTaxEnabled(checked);
+    localStorage.setItem('tax_enabled', String(checked));
+    
+    toast({
+      title: 'تم التحديث',
+      description: 'تم حفظ الإعدادات بنجاح',
+    });
   };
 
   if (!isAdmin) {
@@ -140,10 +119,7 @@ export default function Settings() {
             </div>
             <Switch 
               checked={taxEnabled} 
-              onCheckedChange={(checked) => {
-                setTaxEnabled(checked);
-                updateSetting('tax_enabled', checked);
-              }} 
+              onCheckedChange={toggleTax} 
             />
           </CardContent>
         </Card>

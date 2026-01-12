@@ -50,6 +50,83 @@ export type Database = {
         }
         Relationships: []
       }
+      debt_notes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          debt_id: string
+          id: string
+          note: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          debt_id: string
+          id?: string
+          note: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          debt_id?: string
+          id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_notes_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debts: {
+        Row: {
+          amount: number
+          client_name: string
+          created_at: string
+          created_by: string | null
+          expected_payment_date: string
+          id: string
+          last_reminder_date: string | null
+          notes: string | null
+          service_type: string
+          status: string
+          updated_at: string
+          work_completion_date: string
+        }
+        Insert: {
+          amount?: number
+          client_name: string
+          created_at?: string
+          created_by?: string | null
+          expected_payment_date: string
+          id?: string
+          last_reminder_date?: string | null
+          notes?: string | null
+          service_type: string
+          status?: string
+          updated_at?: string
+          work_completion_date: string
+        }
+        Update: {
+          amount?: number
+          client_name?: string
+          created_at?: string
+          created_by?: string | null
+          expected_payment_date?: string
+          id?: string
+          last_reminder_date?: string | null
+          notes?: string | null
+          service_type?: string
+          status?: string
+          updated_at?: string
+          work_completion_date?: string
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           created_at: string

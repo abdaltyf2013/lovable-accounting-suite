@@ -15,6 +15,7 @@ import AccountantsRanking from "@/pages/AccountantsRanking";
 import SettlementsLog from "@/pages/SettlementsLog";
 import AuditLog from "@/pages/AuditLog";
 import Settings from "@/pages/Settings";
+import Debts from "@/pages/Debts";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/settlements" element={<SettlementsLog />} />
               <Route path="/audit-log" element={<AuditLog />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/debts" element={<Debts />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

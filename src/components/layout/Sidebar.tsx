@@ -82,8 +82,8 @@ export default function Sidebar() {
             <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-sm truncate">سمو الأمجاد</h1>
-            <p className="text-xs text-sidebar-foreground/70">نظام المحاسبة</p>
+            <h1 className="font-bold text-sm truncate">مؤسسة اشعار</h1>
+            <p className="text-xs text-sidebar-foreground/70">للنسخ والتصوير</p>
           </div>
         </div>
       </div>

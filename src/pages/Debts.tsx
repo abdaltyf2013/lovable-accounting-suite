@@ -19,6 +19,7 @@ interface Debt {
   client_name: string;
   service_type: string;
   amount: number;
+  paid_amount: number;
   work_completion_date: string;
   expected_payment_date: string;
   status: 'pending' | 'paid' | 'overdue';
@@ -50,9 +51,12 @@ export default function Debts() {
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
+  const [payingDebt, setPayingDebt] = useState<Debt | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
   const [debtNotes, setDebtNotes] = useState<DebtNote[]>([]);
   const [newNote, setNewNote] = useState('');
 
@@ -210,25 +214,86 @@ export default function Debts() {
     }
   };
 
-  const handleMarkAsPaid = async (debtId: string) => {
+  const openPaymentDialog = (debt: Debt) => {
+    setPayingDebt(debt);
+    setPaymentAmount('');
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handleFullPayment = async () => {
+    if (!payingDebt) return;
+
     try {
       const { error } = await supabase
         .from('debts')
-        .update({ status: 'paid' })
-        .eq('id', debtId);
+        .update({ 
+          status: 'paid',
+          paid_amount: payingDebt.amount
+        })
+        .eq('id', payingDebt.id);
 
       if (error) throw error;
 
       toast({
         title: 'تم بنجاح',
-        description: 'تم تسجيل السداد'
+        description: 'تم تسجيل السداد الكلي'
       });
+      setIsPaymentDialogOpen(false);
+      setPayingDebt(null);
       fetchDebts();
     } catch (error) {
       console.error('Error marking as paid:', error);
       toast({
         title: 'خطأ',
         description: 'حدث خطأ أثناء تحديث الحالة',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handlePartialPayment = async () => {
+    if (!payingDebt || !paymentAmount) return;
+
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى إدخال مبلغ صحيح',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const newPaidAmount = payingDebt.paid_amount + amount;
+    const remaining = payingDebt.amount - newPaidAmount;
+    const isFullyPaid = remaining <= 0;
+
+    try {
+      const { error } = await supabase
+        .from('debts')
+        .update({ 
+          paid_amount: newPaidAmount,
+          status: isFullyPaid ? 'paid' : 'pending'
+        })
+        .eq('id', payingDebt.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'تم بنجاح',
+        description: isFullyPaid 
+          ? 'تم سداد المبلغ بالكامل' 
+          : `تم تسجيل سداد ${amount.toLocaleString()} ريال، المتبقي: ${remaining.toLocaleString()} ريال`
+      });
+      setIsPaymentDialogOpen(false);
+      setPayingDebt(null);
+      setPaymentAmount('');
+      fetchDebts();
+    } catch (error) {
+      console.error('Error partial payment:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء تسجيل السداد',
         variant: 'destructive'
       });
     }
@@ -569,9 +634,18 @@ export default function Debts() {
                       </div>
                       
                       <div className="flex flex-col items-end gap-3">
-                        <p className="text-2xl font-bold text-primary">
-                          {debt.amount.toLocaleString()} ريال
-                        </p>
+                        <div className="text-left">
+                          <p className="text-2xl font-bold text-primary">
+                            {debt.amount.toLocaleString()} ريال
+                          </p>
+                          {debt.paid_amount > 0 && (
+                            <div className="text-sm">
+                              <span className="text-green-600">مسدد: {debt.paid_amount.toLocaleString()}</span>
+                              <span className="text-muted-foreground"> | </span>
+                              <span className="text-orange-600">متبقي: {(debt.amount - debt.paid_amount).toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -603,7 +677,7 @@ export default function Debts() {
                           </Button>
                           <Button
                             size="sm"
-                            onClick={() => handleMarkAsPaid(debt.id)}
+                            onClick={() => openPaymentDialog(debt)}
                             className="gap-1 bg-green-600 hover:bg-green-700"
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -762,6 +836,65 @@ export default function Debts() {
               حفظ التعديلات
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>تسجيل السداد - {payingDebt?.client_name}</DialogTitle>
+          </DialogHeader>
+          {payingDebt && (
+            <div className="space-y-4 mt-4">
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span>المبلغ الإجمالي:</span>
+                  <span className="font-bold">{payingDebt.amount.toLocaleString()} ريال</span>
+                </div>
+                <div className="flex justify-between text-green-600">
+                  <span>المسدد:</span>
+                  <span>{payingDebt.paid_amount.toLocaleString()} ريال</span>
+                </div>
+                <div className="flex justify-between text-orange-600 font-bold">
+                  <span>المتبقي:</span>
+                  <span>{(payingDebt.amount - payingDebt.paid_amount).toLocaleString()} ريال</span>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleFullPayment} 
+                className="w-full gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="w-4 h-4" />
+                سداد كلي (المبلغ المتبقي بالكامل)
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">أو</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>سداد جزئي</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="أدخل المبلغ..."
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                  />
+                  <Button onClick={handlePartialPayment} disabled={!paymentAmount}>
+                    تأكيد
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

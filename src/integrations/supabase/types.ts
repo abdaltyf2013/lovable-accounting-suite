@@ -92,6 +92,7 @@ export type Database = {
           id: string
           last_reminder_date: string | null
           notes: string | null
+          paid_amount: number
           service_type: string
           status: string
           updated_at: string
@@ -106,6 +107,7 @@ export type Database = {
           id?: string
           last_reminder_date?: string | null
           notes?: string | null
+          paid_amount?: number
           service_type: string
           status?: string
           updated_at?: string
@@ -120,6 +122,7 @@ export type Database = {
           id?: string
           last_reminder_date?: string | null
           notes?: string | null
+          paid_amount?: number
           service_type?: string
           status?: string
           updated_at?: string

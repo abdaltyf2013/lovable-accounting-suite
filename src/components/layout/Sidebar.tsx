@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   Moon,
   Sun,
-  CreditCard
+  CreditCard,
+  Wallet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -37,6 +38,7 @@ const navItems: NavItem[] = [
   { title: 'العملاء', href: '/clients', icon: Users },
   { title: 'فواتير المبيعات', href: '/sales', icon: FileText },
   { title: 'فواتير المشتريات', href: '/purchases', icon: ShoppingCart },
+  { title: 'إدارة الديون', href: '/debts', icon: Wallet, adminOnly: true },
   { title: 'المحاسبين', href: '/accountants', icon: UserCircle, adminOnly: true },
   { title: 'التقارير', href: '/reports', icon: BarChart3, adminOnly: true },
   { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, adminOnly: true },

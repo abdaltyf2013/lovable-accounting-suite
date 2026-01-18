@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CheckCircle, Bell, MessageSquare, Trash2, Calendar, Clock, AlertTriangle } from 'lucide-react';
+import { Plus, CheckCircle, Bell, MessageSquare, Trash2, Calendar, Clock, AlertTriangle, Pencil } from 'lucide-react';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
@@ -49,13 +49,24 @@ export default function Debts() {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [debtNotes, setDebtNotes] = useState<DebtNote[]>([]);
   const [newNote, setNewNote] = useState('');
 
   // Form state
   const [formData, setFormData] = useState({
+    client_name: '',
+    service_type: '',
+    amount: '',
+    work_completion_date: '',
+    expected_payment_date: '',
+    notes: ''
+  });
+
+  const [editFormData, setEditFormData] = useState({
     client_name: '',
     service_type: '',
     amount: '',
@@ -135,6 +146,65 @@ export default function Debts() {
       toast({
         title: 'خطأ',
         description: 'حدث خطأ أثناء إضافة الدين',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const openEditDialog = (debt: Debt) => {
+    setEditingDebt(debt);
+    setEditFormData({
+      client_name: debt.client_name,
+      service_type: debt.service_type,
+      amount: debt.amount.toString(),
+      work_completion_date: debt.work_completion_date,
+      expected_payment_date: debt.expected_payment_date,
+      notes: debt.notes || ''
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditDebt = async () => {
+    if (!editingDebt) return;
+    
+    if (!editFormData.client_name || !editFormData.service_type || !editFormData.amount || 
+        !editFormData.work_completion_date || !editFormData.expected_payment_date) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى ملء جميع الحقول المطلوبة',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('debts')
+        .update({
+          client_name: editFormData.client_name,
+          service_type: editFormData.service_type,
+          amount: parseFloat(editFormData.amount),
+          work_completion_date: editFormData.work_completion_date,
+          expected_payment_date: editFormData.expected_payment_date,
+          notes: editFormData.notes || null
+        })
+        .eq('id', editingDebt.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'تم بنجاح',
+        description: 'تم تحديث الدين'
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingDebt(null);
+      fetchDebts();
+    } catch (error) {
+      console.error('Error updating debt:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء تحديث الدين',
         variant: 'destructive'
       });
     }
@@ -515,6 +585,15 @@ export default function Debts() {
                           <Button
                             size="sm"
                             variant="outline"
+                            onClick={() => openEditDialog(debt)}
+                            className="gap-1"
+                          >
+                            <Pencil className="w-4 h-4" />
+                            تعديل
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => handleSendReminder(debt)}
                             disabled={!canSendReminder(debt)}
                             className="gap-1"
@@ -614,6 +693,74 @@ export default function Debts() {
                 ))
               )}
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>تعديل الدين</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label>اسم العميل *</Label>
+              <Input
+                value={editFormData.client_name}
+                onChange={(e) => setEditFormData({ ...editFormData, client_name: e.target.value })}
+                placeholder="أدخل اسم العميل"
+              />
+            </div>
+            
+            <div>
+              <Label>نوع الخدمة *</Label>
+              <Input
+                value={editFormData.service_type}
+                onChange={(e) => setEditFormData({ ...editFormData, service_type: e.target.value })}
+                placeholder="أدخل نوع الخدمة"
+              />
+            </div>
+
+            <div>
+              <Label>المبلغ (ريال) *</Label>
+              <Input
+                type="number"
+                value={editFormData.amount}
+                onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <Label>تاريخ إنجاز العمل *</Label>
+              <Input
+                type="date"
+                value={editFormData.work_completion_date}
+                onChange={(e) => setEditFormData({ ...editFormData, work_completion_date: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label>تاريخ السداد المتوقع *</Label>
+              <Input
+                type="date"
+                value={editFormData.expected_payment_date}
+                onChange={(e) => setEditFormData({ ...editFormData, expected_payment_date: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label>ملاحظات</Label>
+              <Textarea
+                value={editFormData.notes}
+                onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                placeholder="ملاحظات إضافية..."
+              />
+            </div>
+
+            <Button onClick={handleEditDebt} className="w-full">
+              حفظ التعديلات
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -35,8 +35,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { title: 'لوحة التحكم', href: '/dashboard', icon: LayoutDashboard, branchManagerOrAdmin: true },
-  { title: 'لوحة تحكم المحاسب', href: '/accountant-dashboard', icon: LayoutDashboard, accountantOnly: true },
+  { title: 'لوحة التحكم', href: '/dashboard', icon: LayoutDashboard },
   { title: 'المهام', href: '/tasks', icon: ClipboardList },
   { title: 'العملاء', href: '/clients', icon: Users },
   { title: 'المبيعات', href: '/sales', icon: FileText },
@@ -75,7 +74,6 @@ export default function Sidebar() {
   const filteredNavItems = navItems.filter(item => {
     if (item.adminOnly) return isAdmin;
     if (item.branchManagerOrAdmin) return isBranchManagerOrAdmin || isAdmin;
-    if (item.accountantOnly) return !isBranchManagerOrAdmin && !isAdmin;
     return true;
   });
 

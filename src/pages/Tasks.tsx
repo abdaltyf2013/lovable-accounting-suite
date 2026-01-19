@@ -81,6 +81,7 @@ const Tasks = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [isLogsDialogOpen, setIsLogsDialogOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskNotes, setTaskNotes] = useState<TaskNote[]>([]);
   const [taskLogs, setTaskLogs] = useState<TaskTimeLog[]>([]);
@@ -192,8 +193,13 @@ const Tasks = () => {
     try {
       await supabase.from('tasks').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', task.id);
       await supabase.from('task_time_logs').insert({ task_id: task.id, action: 'cancelled', user_id: user?.id, user_name: profile?.full_name });
-      toast.success("تم إلغاء المهمة"); fetchTasks();
+      toast.success("تم إلغاء المهمة"); setIsCancelDialogOpen(false); fetchTasks();
     } catch { toast.error("خطأ"); }
+  };
+
+  const openCancelDialog = (task: Task) => {
+    setSelectedTask(task);
+    setIsCancelDialogOpen(true);
   };
 
   const openNotesDialog = async (task: Task) => {
@@ -306,7 +312,7 @@ const Tasks = () => {
                     {task.status === 'pending' && <Button size="sm" variant="outline" onClick={() => handleStartTask(task)}><Play className="w-4 h-4 ml-1" />بدء</Button>}
                     {task.status === 'in_progress' && <><Button size="sm" variant="outline" onClick={() => handlePauseTask(task)}><Pause className="w-4 h-4 ml-1" />إيقاف</Button><Button size="sm" onClick={() => handleCompleteTask(task)}><CheckCircle2 className="w-4 h-4 ml-1" />إكمال</Button></>}
                     {task.status === 'paused' && <><Button size="sm" variant="outline" onClick={() => handleResumeTask(task)}><RotateCcw className="w-4 h-4 ml-1" />استئناف</Button><Button size="sm" onClick={() => handleCompleteTask(task)}><CheckCircle2 className="w-4 h-4 ml-1" />إكمال</Button></>}
-                    {['pending', 'in_progress', 'paused'].includes(task.status) && <><Button size="sm" variant="ghost" onClick={() => openEditDialog(task)}><Edit className="w-4 h-4" /></Button><Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleCancelTask(task)}><XCircle className="w-4 h-4" /></Button></>}
+                    {['pending', 'in_progress', 'paused'].includes(task.status) && <><Button size="sm" variant="ghost" onClick={() => openEditDialog(task)}><Edit className="w-4 h-4" /></Button><Button size="sm" variant="ghost" className="text-red-600" onClick={() => openCancelDialog(task)}><XCircle className="w-4 h-4" /></Button></>}
                     <Button size="sm" variant="ghost" onClick={() => openNotesDialog(task)}><MessageSquare className="w-4 h-4" /></Button>
                     <CollapsibleTrigger asChild><Button size="sm" variant="ghost">{expandedTasks.has(task.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</Button></CollapsibleTrigger>
                   </div>
@@ -353,6 +359,21 @@ const Tasks = () => {
             <ScrollArea className="h-[300px]">
               {taskNotes.length === 0 ? <p className="text-center text-muted-foreground py-8">لا توجد ملاحظات</p> : <div className="space-y-3">{taskNotes.map((note) => <Card key={note.id}><CardContent className="py-3"><p className="text-sm">{note.note}</p><p className="text-xs text-muted-foreground mt-2">{note.created_by_name} - {format(new Date(note.created_at), 'yyyy/MM/dd HH:mm', { locale: ar })}</p></CardContent></Card>)}</div>}
             </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>تأكيد إلغاء المهمة</DialogTitle></DialogHeader>
+          <div className="py-6 text-center">
+            <XCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />
+            <p className="text-lg font-medium mb-2">هل أنت متأكد من إلغاء هذه المهمة؟</p>
+            <p className="text-muted-foreground">لا يمكن التراجع عن هذا الإجراء بعد التأكيد.</p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => setIsCancelDialogOpen(false)}>تراجع</Button>
+            <Button variant="destructive" className="flex-1" onClick={() => selectedTask && handleCancelTask(selectedTask)}>تأكيد الإلغاء</Button>
           </div>
         </DialogContent>
       </Dialog>

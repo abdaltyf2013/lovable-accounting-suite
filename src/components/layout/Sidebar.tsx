@@ -44,7 +44,7 @@ const navItems: NavItem[] = [
   { title: 'إدارة الديون', href: '/debts', icon: Wallet, adminOnly: true },
   { title: 'المحاسبين', href: '/accountants', icon: UserCircle, branchManagerOrAdmin: true },
   { title: 'التقارير', href: '/reports', icon: BarChart3, branchManagerOrAdmin: true },
-  { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy },
+  { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, branchManagerOrAdmin: true },
   { title: 'سجل التصفيات', href: '/settlements', icon: History },
   { title: 'سجل الرقابة', href: '/audit-log', icon: ShieldCheck, adminOnly: true },
   { title: 'الإعدادات', href: '/settings', icon: Settings, adminOnly: true },

@@ -66,11 +66,11 @@ const priorityConfig = {
 };
 
 const statusConfig = {
-  pending: { label: 'في الانتظار', color: 'bg-gray-100 text-gray-700' },
-  in_progress: { label: 'قيد التنفيذ', color: 'bg-blue-100 text-blue-700' },
-  paused: { label: 'متوقفة', color: 'bg-yellow-100 text-yellow-700' },
-  completed: { label: 'مكتملة', color: 'bg-green-500 text-white' },
-  cancelled: { label: 'ملغاة', color: 'bg-red-500 text-white' }
+  pending: { label: 'في الانتظار', color: 'bg-gray-100 text-gray-700', cardBg: '' },
+  in_progress: { label: 'قيد التنفيذ', color: 'bg-blue-100 text-blue-700', cardBg: '' },
+  paused: { label: 'متوقفة', color: 'bg-yellow-100 text-yellow-700', cardBg: '' },
+  completed: { label: 'مكتملة', color: 'bg-green-500 text-white', cardBg: 'bg-green-600 text-white' },
+  cancelled: { label: 'ملغاة', color: 'bg-red-500 text-white', cardBg: 'bg-red-600 text-white' }
 };
 
 const Tasks = () => {
@@ -291,21 +291,21 @@ const Tasks = () => {
         {filterTasks().length === 0 ? (
           <Card><CardContent className="py-12 text-center"><ListTodo className="w-12 h-12 mx-auto text-muted-foreground mb-4" /><p className="text-muted-foreground">لا توجد مهام</p></CardContent></Card>
         ) : filterTasks().map((task) => (
-          <Card key={task.id} className={`transition-all border-2 dark:bg-slate-900/50 ${getTaskAgeColor(task.created_at)}`}>
+          <Card key={task.id} className={`transition-all border-2 ${statusConfig[task.status].cardBg || `dark:bg-slate-900/50 ${getTaskAgeColor(task.created_at)}`}`}>
             <Collapsible open={expandedTasks.has(task.id)} onOpenChange={() => setExpandedTasks(prev => { const s = new Set(prev); s.has(task.id) ? s.delete(task.id) : s.add(task.id); return s; })}>
               <CardContent className="py-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <h3 className="font-semibold text-foreground truncate">{task.title}</h3>
+                      <h3 className={`font-semibold truncate ${task.status === 'completed' || task.status === 'cancelled' ? 'text-white' : 'text-foreground'}`}>{task.title}</h3>
                       <Badge className={priorityConfig[task.priority].color}>{priorityConfig[task.priority].label}</Badge>
                       <Badge className={statusConfig[task.status].color}>{statusConfig[task.status].label}</Badge>
                     </div>
-                    <div className="flex flex-wrap gap-4 text-sm text-foreground/80 dark:text-white/90">
-                      <span className="flex items-center gap-1 font-medium"><User className="w-4 h-4 text-primary" />{task.client_name}</span>
+                    <div className={`flex flex-wrap gap-4 text-sm ${task.status === 'completed' || task.status === 'cancelled' ? 'text-white' : 'text-foreground/80 dark:text-white/90'}`}>
+                      <span className="flex items-center gap-1 font-medium"><User className={`w-4 h-4 ${task.status === 'completed' || task.status === 'cancelled' ? 'text-white' : 'text-primary'}`} />{task.client_name}</span>
                       {task.phone && (
                         <div className="flex items-center gap-2">
-                          <span className="flex items-center gap-1 font-medium"><Phone className="w-4 h-4 text-primary" />{task.phone}</span>
+                          <span className="flex items-center gap-1 font-medium"><Phone className={`w-4 h-4 ${task.status === 'completed' || task.status === 'cancelled' ? 'text-white' : 'text-primary'}`} />{task.phone}</span>
                           <Button 
                             size="icon" 
                             variant="ghost" 
@@ -321,8 +321,8 @@ const Tasks = () => {
                           </Button>
                         </div>
                       )}
-                      <span className="flex items-center gap-1 font-medium"><Calendar className="w-4 h-4 text-primary" />{format(new Date(task.due_date), 'yyyy/MM/dd')}</span>
-                      {task.started_by_name && <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold"><AlertCircle className="w-4 h-4" />المنفذ: {task.started_by_name}</span>}
+                      <span className="flex items-center gap-1 font-medium"><Calendar className={`w-4 h-4 ${task.status === 'completed' || task.status === 'cancelled' ? 'text-white' : 'text-primary'}`} />{format(new Date(task.due_date), 'yyyy/MM/dd')}</span>
+                      {task.started_by_name && <span className={`flex items-center gap-1 font-bold ${task.status === 'completed' || task.status === 'cancelled' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`}><AlertCircle className="w-4 h-4" />المنفذ: {task.started_by_name}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -330,8 +330,8 @@ const Tasks = () => {
                     {task.status === 'in_progress' && <><Button size="sm" variant="outline" onClick={() => handlePauseTask(task)}><Pause className="w-4 h-4 ml-1" />إيقاف</Button><Button size="sm" onClick={() => handleCompleteTask(task)}><CheckCircle2 className="w-4 h-4 ml-1" />إكمال</Button></>}
                     {task.status === 'paused' && <><Button size="sm" variant="outline" onClick={() => handleResumeTask(task)}><RotateCcw className="w-4 h-4 ml-1" />استئناف</Button><Button size="sm" onClick={() => handleCompleteTask(task)}><CheckCircle2 className="w-4 h-4 ml-1" />إكمال</Button></>}
                     {['pending', 'in_progress', 'paused'].includes(task.status) && <><Button size="sm" variant="ghost" onClick={() => openEditDialog(task)}><Edit className="w-4 h-4" /></Button><Button size="sm" variant="ghost" className="text-red-600" onClick={() => openCancelDialog(task)}><XCircle className="w-4 h-4" /></Button></>}
-                    <Button size="sm" variant="ghost" onClick={() => openNotesDialog(task)}><MessageSquare className="w-4 h-4" /></Button>
-                    <CollapsibleTrigger asChild><Button size="sm" variant="ghost">{expandedTasks.has(task.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</Button></CollapsibleTrigger>
+                    <Button size="sm" variant="ghost" onClick={() => openNotesDialog(task)} className={task.status === 'completed' || task.status === 'cancelled' ? 'text-white hover:bg-white/20' : ''}><MessageSquare className="w-4 h-4" /></Button>
+                    <CollapsibleTrigger asChild><Button size="sm" variant="ghost" className={task.status === 'completed' || task.status === 'cancelled' ? 'text-white hover:bg-white/20' : ''}>{expandedTasks.has(task.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</Button></CollapsibleTrigger>
                   </div>
                 </div>
                 <CollapsibleContent>

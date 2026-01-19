@@ -108,7 +108,19 @@ const Tasks = () => {
     return 'border-r-4 border-r-green-500 bg-green-50/50';
   };
 
-  const sortTasks = (tasksToSort: Task[]) => [...tasksToSort].sort((a, b) => sortBy === 'priority' ? ({ urgent: 0, high: 1, medium: 2, low: 3 }[a.priority] - { urgent: 0, high: 1, medium: 2, low: 3 }[b.priority]) : new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const sortTasks = (tasksToSort: Task[]) => [...tasksToSort].sort((a, b) => {
+    // أولاً: الترتيب حسب الحالة (المكتملة والملغاة في الأسفل)
+    const isFinished = (status: string) => status === 'completed' || status === 'cancelled';
+    if (isFinished(a.status) && !isFinished(b.status)) return 1;
+    if (!isFinished(a.status) && isFinished(b.status)) return -1;
+
+    // ثانياً: الترتيب المختار (الأولوية أو التاريخ) داخل كل مجموعة
+    if (sortBy === 'priority') {
+      const priorityMap = { urgent: 0, high: 1, medium: 2, low: 3 };
+      return priorityMap[a.priority] - priorityMap[b.priority];
+    }
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 
   const filterTasks = () => {
     let filtered = tasks;

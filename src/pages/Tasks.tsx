@@ -303,7 +303,24 @@ const Tasks = () => {
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-foreground/80 dark:text-white/90">
                       <span className="flex items-center gap-1 font-medium"><User className="w-4 h-4 text-primary" />{task.client_name}</span>
-                      {task.phone && <span className="flex items-center gap-1 font-medium"><Phone className="w-4 h-4 text-primary" />{task.phone}</span>}
+                      {task.phone && (
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-1 font-medium"><Phone className="w-4 h-4 text-primary" />{task.phone}</span>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const cleanPhone = task.phone?.replace(/\D/g, '');
+                              const finalPhone = cleanPhone?.startsWith('0') ? `966${cleanPhone.substring(1)}` : cleanPhone;
+                              window.open(`https://wa.me/${finalPhone}`, '_blank');
+                            }}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      )}
                       <span className="flex items-center gap-1 font-medium"><Calendar className="w-4 h-4 text-primary" />{format(new Date(task.due_date), 'yyyy/MM/dd')}</span>
                       {task.started_by_name && <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold"><AlertCircle className="w-4 h-4" />المنفذ: {task.started_by_name}</span>}
                     </div>

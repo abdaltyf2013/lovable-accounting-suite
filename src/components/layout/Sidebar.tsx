@@ -31,10 +31,12 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
   branchManagerOrAdmin?: boolean;
+  accountantOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
   { title: 'لوحة التحكم', href: '/dashboard', icon: LayoutDashboard, branchManagerOrAdmin: true },
+  { title: 'لوحة تحكم المحاسب', href: '/accountant-dashboard', icon: LayoutDashboard, accountantOnly: true },
   { title: 'المهام', href: '/tasks', icon: ClipboardList },
   { title: 'العملاء', href: '/clients', icon: Users },
   { title: 'المبيعات', href: '/sales', icon: FileText },
@@ -42,7 +44,7 @@ const navItems: NavItem[] = [
   { title: 'إدارة الديون', href: '/debts', icon: Wallet, adminOnly: true },
   { title: 'المحاسبين', href: '/accountants', icon: UserCircle, branchManagerOrAdmin: true },
   { title: 'التقارير', href: '/reports', icon: BarChart3, branchManagerOrAdmin: true },
-  { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, branchManagerOrAdmin: true },
+  { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy },
   { title: 'سجل التصفيات', href: '/settlements', icon: History },
   { title: 'سجل الرقابة', href: '/audit-log', icon: ShieldCheck, adminOnly: true },
   { title: 'الإعدادات', href: '/settings', icon: Settings, adminOnly: true },
@@ -73,6 +75,7 @@ export default function Sidebar() {
   const filteredNavItems = navItems.filter(item => {
     if (item.adminOnly) return isAdmin;
     if (item.branchManagerOrAdmin) return isBranchManagerOrAdmin || isAdmin;
+    if (item.accountantOnly) return !isBranchManagerOrAdmin && !isAdmin;
     return true;
   });
 

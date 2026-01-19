@@ -74,7 +74,7 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4">
             <Building2 className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">مؤسسة سمو الأمجاد للتجارة</h1>
+          <h1 className="text-2xl font-bold text-foreground">مؤسسة اشعار للنسخ والتصوير</h1>
           <p className="text-muted-foreground mt-2">نظام إدارة الحسابات</p>
         </div>
 

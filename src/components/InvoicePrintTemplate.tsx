@@ -69,7 +69,7 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
             <h1 className="text-5xl font-black text-gray-900 mb-2">
               {invoice.type === 'sales' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}
             </h1>
-            <p className="text-2xl font-bold text-gray-700">مؤسسة سمو الأمجاد للتجارة</p>
+            <p className="text-2xl font-bold text-gray-700">مؤسسة اشعار للنسخ والتصوير</p>
           </div>
           <div className="text-left bg-gray-100 p-6 rounded-2xl border-2 border-gray-200">
             <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">رقم الفاتورة</div>

@@ -12,6 +12,21 @@ interface AccountantStats {
   invoice_count: number;
 }
 
+// خريطة توحيد الأسماء المكررة
+const nameMapping: Record<string, string> = {
+  "عبد اللطيف": "عبداللطيف علوي اليافعي",
+  "عبداللطيف": "عبداللطيف علوي اليافعي",
+  "عبد اللطيف علوي اليافعي": "عبداللطيف علوي اليافعي",
+  "فؤاد مكتب اشعار": "فؤاد خليل",
+  "فواد خليل": "فؤاد خليل",
+  "فؤاد مكتب إشعار": "فؤاد خليل",
+};
+
+// دالة توحيد الاسم
+const normalizeName = (name: string): string => {
+  return nameMapping[name] || name;
+};
+
 const AccountantsRanking = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const { toast } = useToast();
@@ -34,12 +49,13 @@ const AccountantsRanking = () => {
       if (error) throw error;
 
       const stats = data.reduce((acc: Record<string, AccountantStats>, curr) => {
-        const name = curr.accountant_name || "غير معروف";
-        if (!acc[name]) {
-          acc[name] = { accountant_name: name, total_amount: 0, invoice_count: 0 };
+        const originalName = curr.accountant_name || "غير معروف";
+        const normalizedName = normalizeName(originalName);
+        if (!acc[normalizedName]) {
+          acc[normalizedName] = { accountant_name: normalizedName, total_amount: 0, invoice_count: 0 };
         }
-        acc[name].total_amount += Number(curr.total_amount);
-        acc[name].invoice_count += 1;
+        acc[normalizedName].total_amount += Number(curr.total_amount);
+        acc[normalizedName].invoice_count += 1;
         return acc;
       }, {});
 
@@ -51,17 +67,22 @@ const AccountantsRanking = () => {
     if (!confirm(`هل أنت متأكد من تصفية حساب المحاسب "${accountantName}" بمبلغ ${totalAmount.toLocaleString()} ر.س؟ سيتم تصفير إحصائياته الحالية.`)) return;
 
     try {
-      // 1. تحديث الفواتير الحالية لتصبح "مؤرشفة" (سنستخدم حقل status أو ملاحظات بما أننا لا نستطيع تعديل الجدول)
-      // سنقوم بتغيير الحالة إلى 'archived' (يجب التأكد من دعمها أو استخدام ملاحظات)
-      // الأفضل: سنستخدم حقل notes لإضافة علامة [SETTLED]
-      const { error } = await supabase
-        .from("invoices")
-        .update({ status: 'cancelled', notes: `[SETTLED_${new Date().toISOString()}] ${accountantName}` })
-        .eq("accountant_name", accountantName)
-        .eq("type", "sales")
-        .eq("status", "paid");
+      // الحصول على جميع الأسماء المكررة للمحاسب
+      const namesToSettle = [accountantName, ...Object.entries(nameMapping)
+        .filter(([_, mapped]) => mapped === accountantName)
+        .map(([original, _]) => original)];
 
-      if (error) throw error;
+      // تصفية جميع الفواتير للأسماء المكررة
+      for (const name of namesToSettle) {
+        const { error } = await supabase
+          .from("invoices")
+          .update({ status: 'cancelled', notes: `[SETTLED_${new Date().toISOString()}] ${accountantName}` })
+          .eq("accountant_name", name)
+          .eq("type", "sales")
+          .eq("status", "paid");
+        
+        if (error) throw error;
+      }
 
       toast({
         title: "تمت التصفية",
@@ -70,6 +91,7 @@ const AccountantsRanking = () => {
       
       queryClient.invalidateQueries({ queryKey: ["accountants-ranking"] });
     } catch (error) {
+      console.error(error);
       toast({
         title: "خطأ",
         description: "فشل في تصفية الحساب",
@@ -114,7 +136,7 @@ const AccountantsRanking = () => {
       <div className="grid gap-4">
         {ranking?.map((accountant, index) => (
           <div
-            key={accountant.accountant_name}
+            key={`${accountant.accountant_name}-${index}`}
             className={`relative flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border bg-card transition-all hover:shadow-md gap-4 ${
               index === 0 ? "border-yellow-500 bg-yellow-50/10" : ""
             }`}

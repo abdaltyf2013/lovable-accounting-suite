@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   Moon,
   Sun,
-  Wallet
+  Wallet,
+  ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -34,6 +35,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { title: 'لوحة التحكم', href: '/dashboard', icon: LayoutDashboard, branchManagerOrAdmin: true },
+  { title: 'المهام', href: '/tasks', icon: ClipboardList },
   { title: 'العملاء', href: '/clients', icon: Users },
   { title: 'المبيعات', href: '/sales', icon: FileText, branchManagerOrAdmin: true },
   { title: 'المصروفات', href: '/purchases', icon: ShoppingCart, branchManagerOrAdmin: true },

@@ -257,6 +257,139 @@ export type Database = {
         }
         Relationships: []
       }
+      task_notes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          id: string
+          note: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: string
+          note: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: string
+          note?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_notes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_time_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          notes: string | null
+          task_id: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          task_id: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          task_id?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_time_logs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          cancelled_at: string | null
+          client_name: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string
+          id: string
+          phone: string | null
+          priority: string
+          started_at: string | null
+          started_by: string | null
+          started_by_name: string | null
+          status: string
+          title: string
+          total_work_time: number
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          client_name: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date: string
+          id?: string
+          phone?: string | null
+          priority?: string
+          started_at?: string | null
+          started_by?: string | null
+          started_by_name?: string | null
+          status?: string
+          title: string
+          total_work_time?: number
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          client_name?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string
+          id?: string
+          phone?: string | null
+          priority?: string
+          started_at?: string | null
+          started_by?: string | null
+          started_by_name?: string | null
+          status?: string
+          title?: string
+          total_work_time?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

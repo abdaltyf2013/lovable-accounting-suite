@@ -36,8 +36,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: 'لوحة التحكم', href: '/dashboard', icon: LayoutDashboard },
   { title: 'العملاء', href: '/clients', icon: Users },
-  { title: 'فواتير المبيعات', href: '/sales', icon: FileText },
-  { title: 'فواتير المشتريات', href: '/purchases', icon: ShoppingCart },
+  { title: 'المبيعات', href: '/sales', icon: FileText },
+  { title: 'المصروفات', href: '/purchases', icon: ShoppingCart },
   { title: 'إدارة الديون', href: '/debts', icon: Wallet, adminOnly: true },
   { title: 'المحاسبين', href: '/accountants', icon: UserCircle, adminOnly: true },
   { title: 'التقارير', href: '/reports', icon: BarChart3, adminOnly: true },

@@ -335,7 +335,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-foreground">
-          {type === 'sales' ? 'فواتير المبيعات' : 'فواتير المشتريات'}
+          {type === 'sales' ? 'المبيعات' : 'المصروفات'}
         </h1>
         
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

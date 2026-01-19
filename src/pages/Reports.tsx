@@ -228,9 +228,9 @@ export default function Reports() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">المحاسب</th>
-                    <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">فواتير المبيعات</th>
+                    <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">المبيعات</th>
                     <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">إجمالي المبيعات</th>
-                    <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">فواتير المشتريات</th>
+                    <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">المصروفات</th>
                     <th className="text-right py-3 px-2 text-sm font-medium text-muted-foreground">إجمالي المشتريات</th>
                   </tr>
                 </thead>

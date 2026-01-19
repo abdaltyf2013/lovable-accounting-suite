@@ -342,8 +342,8 @@ export default function Accountants() {
           {selectedAccountant && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <Card><CardContent className="p-4 text-center"><TrendingUp className="w-8 h-8 text-green-600 mx-auto mb-2" /><p className="text-xs text-muted-foreground">فواتير المبيعات</p><p className="text-xl font-bold">{selectedAccountant.salesCount}</p></CardContent></Card>
-                <Card><CardContent className="p-4 text-center"><TrendingDown className="w-8 h-8 text-red-600 mx-auto mb-2" /><p className="text-xs text-muted-foreground">فواتير المشتريات</p><p className="text-xl font-bold">{selectedAccountant.purchaseCount}</p></CardContent></Card>
+                <Card><CardContent className="p-4 text-center"><TrendingUp className="w-8 h-8 text-green-600 mx-auto mb-2" /><p className="text-xs text-muted-foreground">المبيعات</p><p className="text-xl font-bold">{selectedAccountant.salesCount}</p></CardContent></Card>
+                <Card><CardContent className="p-4 text-center"><TrendingDown className="w-8 h-8 text-red-600 mx-auto mb-2" /><p className="text-xs text-muted-foreground">المصروفات</p><p className="text-xl font-bold">{selectedAccountant.purchaseCount}</p></CardContent></Card>
                 <Card><CardContent className="p-4 text-center"><DollarSign className="w-8 h-8 text-green-600 mx-auto mb-2" /><p className="text-xs text-muted-foreground">مدفوعة</p><p className="text-xl font-bold text-green-600">{selectedAccountant.paidCount}</p></CardContent></Card>
                 <Card><CardContent className="p-4 text-center"><FileText className="w-8 h-8 text-yellow-600 mx-auto mb-2" /><p className="text-xs text-muted-foreground">معلقة</p><p className="text-xl font-bold text-yellow-600">{selectedAccountant.pendingCount}</p></CardContent></Card>
               </div>

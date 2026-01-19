@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Users, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Trophy, History } from 'lucide-react';
+import { FileText, Users, TrendingUp, TrendingDown, DollarSign, Trophy, History, AlertTriangle, Calendar, Clock } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
+import { format, isBefore, parseISO } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
 interface Stats {
   totalClients: number;
@@ -14,6 +17,20 @@ interface Stats {
   todaySales: number;
   myRank?: number;
   totalSettled?: number;
+}
+
+interface ChartData {
+  name: string;
+  sales: number;
+  purchases: number;
+}
+
+interface OverdueTask {
+  id: string;
+  title: string;
+  client_name: string;
+  due_date: string;
+  status: string;
 }
 
 export default function Dashboard() {
@@ -28,12 +45,38 @@ export default function Dashboard() {
     todaySales: 0,
   });
   const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [overdueTasks, setOverdueTasks] = useState<OverdueTask[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
     fetchRecentInvoices();
-  }, []);
+    if (isAdmin) {
+      fetchOverdueTasks();
+    }
+  }, [isAdmin]);
+
+  const fetchOverdueTasks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id, title, client_name, due_date, status')
+        .not('status', 'in', '("completed","cancelled")');
+      
+      if (error) throw error;
+
+      const today = new Date();
+      const overdue = (data || []).filter(task => {
+        const dueDate = parseISO(task.due_date);
+        return isBefore(dueDate, today);
+      });
+
+      setOverdueTasks(overdue);
+    } catch (error) {
+      console.error('Error fetching overdue tasks:', error);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -43,7 +86,6 @@ export default function Dashboard() {
       
       let invoicesQuery = supabase.from('invoices').select('*').gte('created_at', firstDayOfMonth);
       
-      // إذا لم يكن مديراً، نفلتر إحصائياته هو فقط
       if (!isAdmin && profile?.full_name) {
         invoicesQuery = invoicesQuery.eq('accountant_name', profile.full_name);
       }
@@ -58,11 +100,30 @@ export default function Dashboard() {
       const purchaseInvoices = invoices.filter(i => i.type === 'purchase' && i.status !== 'cancelled');
       const todaySales = salesInvoices.filter(i => i.created_at >= startOfDay).reduce((sum, i) => sum + Number(i.total_amount), 0);
 
+      // تجهيز بيانات الرسم البياني (آخر 7 أيام)
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        return format(d, 'yyyy-MM-dd');
+      }).reverse();
+
+      const dailyData = last7Days.map(date => {
+        const daySales = invoices.filter(i => i.type === 'sales' && i.status !== 'cancelled' && i.created_at.startsWith(date))
+          .reduce((sum, i) => sum + Number(i.total_amount), 0);
+        const dayPurchases = invoices.filter(i => i.type === 'purchase' && i.status !== 'cancelled' && i.created_at.startsWith(date))
+          .reduce((sum, i) => sum + Number(i.total_amount), 0);
+        return {
+          name: format(parseISO(date), 'eeee', { locale: ar }),
+          sales: daySales,
+          purchases: dayPurchases,
+        };
+      });
+      setChartData(dailyData);
+
       let myRank = 0;
       let totalSettled = 0;
 
       if (!isAdmin && profile?.full_name) {
-        // جلب الترتيب
         const { data: rankingData } = await supabase
           .from('invoices')
           .select('accountant_name, total_amount')
@@ -78,7 +139,6 @@ export default function Dashboard() {
         const sortedRanking = Object.entries(ranking).sort((a: any, b: any) => b[1] - a[1]);
         myRank = sortedRanking.findIndex(r => r[0] === profile.full_name) + 1;
 
-        // جلب إجمالي المصفى
         const { data: settledData } = await supabase
           .from('invoices')
           .select('total_amount')
@@ -196,15 +256,25 @@ export default function Dashboard() {
     },
   ];
 
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">
-          مرحباً، {profile?.full_name}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {isAdmin ? 'لوحة تحكم المدير' : 'لوحة تحكم المحاسب'}
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            مرحباً، {profile?.full_name}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {isAdmin ? 'لوحة تحكم المدير' : 'لوحة تحكم المحاسب'}
+          </p>
+        </div>
+        {isAdmin && overdueTasks.length > 0 && (
+          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg border border-red-100 dark:border-red-900/30 animate-pulse">
+            <AlertTriangle className="w-5 h-5" />
+            <span className="font-bold text-sm">لديك {overdueTasks.length} مهام متأخرة!</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -224,6 +294,74 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {isAdmin && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                تحليل المبيعات والمشتريات (آخر 7 أيام)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                    <YAxis axisLine={false} tickLine={false} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                    />
+                    <Legend verticalAlign="top" height={36}/>
+                    <Bar name="المبيعات" dataKey="sales" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar name="المشتريات" dataKey="purchases" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-red-100 dark:border-red-900/30">
+            <CardHeader className="bg-red-50/50 dark:bg-red-900/10">
+              <CardTitle className="text-lg flex items-center gap-2 text-red-600 dark:text-red-400">
+                <Clock className="w-5 h-5" />
+                تنبيه المهام المتأخرة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {overdueTasks.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">لا توجد مهام متأخرة حالياً</p>
+              ) : (
+                <div className="divide-y">
+                  {overdueTasks.slice(0, 5).map((task) => (
+                    <div key={task.id} className="p-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-bold text-sm">{task.title}</h4>
+                        <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full">متأخرة</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Users className="w-3 h-3" />{task.client_name}</span>
+                        <span className="flex items-center gap-1 text-red-500 font-medium">
+                          <Calendar className="w-3 h-3" />
+                          تاريخ التسليم: {format(parseISO(task.due_date), 'yyyy/MM/dd')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {overdueTasks.length > 5 && (
+                    <div className="p-3 text-center">
+                      <p className="text-xs text-muted-foreground">وهناك {overdueTasks.length - 5} مهام متأخرة أخرى...</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <CardHeader>

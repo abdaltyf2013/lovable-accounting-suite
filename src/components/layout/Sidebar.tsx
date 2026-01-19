@@ -7,7 +7,6 @@ import {
   Users,
   FileText,
   ShoppingCart,
-  Package,
   BarChart3,
   Settings,
   LogOut,
@@ -19,7 +18,6 @@ import {
   ShieldCheck,
   Moon,
   Sun,
-  CreditCard,
   Wallet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,17 +29,18 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
+  branchManagerOrAdmin?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { title: 'لوحة التحكم', href: '/dashboard', icon: LayoutDashboard },
+  { title: 'لوحة التحكم', href: '/dashboard', icon: LayoutDashboard, branchManagerOrAdmin: true },
   { title: 'العملاء', href: '/clients', icon: Users },
-  { title: 'المبيعات', href: '/sales', icon: FileText },
-  { title: 'المصروفات', href: '/purchases', icon: ShoppingCart },
+  { title: 'المبيعات', href: '/sales', icon: FileText, branchManagerOrAdmin: true },
+  { title: 'المصروفات', href: '/purchases', icon: ShoppingCart, branchManagerOrAdmin: true },
   { title: 'إدارة الديون', href: '/debts', icon: Wallet, adminOnly: true },
-  { title: 'المحاسبين', href: '/accountants', icon: UserCircle, adminOnly: true },
-  { title: 'التقارير', href: '/reports', icon: BarChart3, adminOnly: true },
-  { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, adminOnly: true },
+  { title: 'المحاسبين', href: '/accountants', icon: UserCircle, branchManagerOrAdmin: true },
+  { title: 'التقارير', href: '/reports', icon: BarChart3, branchManagerOrAdmin: true },
+  { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, branchManagerOrAdmin: true },
   { title: 'سجل التصفيات', href: '/settlements', icon: History },
   { title: 'سجل الرقابة', href: '/audit-log', icon: ShieldCheck, adminOnly: true },
   { title: 'الإعدادات', href: '/settings', icon: Settings, adminOnly: true },
@@ -49,7 +48,7 @@ const navItems: NavItem[] = [
 
 export default function Sidebar() {
   const location = useLocation();
-  const { profile, signOut, isAdmin } = useAuth();
+  const { profile, signOut, isAdmin, isBranchManagerOrAdmin, userRole } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
@@ -71,8 +70,15 @@ export default function Sidebar() {
 
   const filteredNavItems = navItems.filter(item => {
     if (item.adminOnly) return isAdmin;
+    if (item.branchManagerOrAdmin) return isBranchManagerOrAdmin || isAdmin;
     return true;
   });
+
+  const getRoleLabel = () => {
+    if (isAdmin) return 'مدير';
+    if (userRole === 'branch_manager') return 'مدير فرع';
+    return 'محاسب';
+  };
 
   const NavContent = () => (
     <>
@@ -118,7 +124,7 @@ export default function Sidebar() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{profile?.full_name}</p>
             <p className="text-xs text-sidebar-foreground/70">
-              {isAdmin ? 'مدير' : 'محاسب'}
+              {getRoleLabel()}
             </p>
           </div>
         </div>

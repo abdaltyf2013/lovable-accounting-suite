@@ -2,12 +2,22 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+type UserRole = 'admin' | 'branch_manager' | 'accountant';
+
 interface Profile {
   id: string;
   user_id: string;
   full_name: string;
   email: string;
-  role: 'admin' | 'accountant';
+  role: string; // Keep for backward compatibility
+  created_at: string;
+  updated_at: string;
+}
+
+interface UserRoleRecord {
+  id: string;
+  user_id: string;
+  role: UserRole;
   created_at: string;
   updated_at: string;
 }
@@ -15,37 +25,68 @@ interface Profile {
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
+  userRole: UserRole;
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  isBranchManager: boolean;
+  isBranchManagerOrAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const ADMIN_EMAILS = ['awep991@gmail.com', 'abdaltyf2015.com@gmail.com'];
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [userRole, setUserRole] = useState<UserRole>('accountant');
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, userEmail: string | undefined) => {
     console.log("Fetching profile for user:", userId);
-    const { data, error } = await supabase
+    
+    // Fetch profile
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (error) {
-      console.error("Error fetching profile:", error);
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
     }
 
-    if (data) {
-      console.log("Profile loaded:", data);
-      setProfile(data as Profile);
+    if (profileData) {
+      console.log("Profile loaded:", profileData);
+      setProfile(profileData as Profile);
+    }
+
+    // Fetch user role from user_roles table
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (roleError) {
+      console.error("Error fetching user role:", roleError);
+    }
+
+    if (roleData) {
+      console.log("User role loaded:", roleData);
+      setUserRole(roleData.role as UserRole);
+    } else {
+      // Check if user is hardcoded admin
+      if (userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
+        setUserRole('admin');
+      } else {
+        setUserRole('accountant');
+      }
     }
   };
 
@@ -58,9 +99,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           // Use setTimeout to avoid potential deadlock
-          setTimeout(() => fetchProfile(session.user.id), 0);
+          setTimeout(() => fetchProfile(session.user.id, session.user.email), 0);
         } else {
           setProfile(null);
+          setUserRole('accountant');
         }
         setLoading(false);
       }
@@ -71,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        fetchProfile(session.user.id, session.user.email);
       }
       setLoading(false);
     });
@@ -92,7 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailRedirectTo: window.location.origin,
         data: { 
           full_name: fullName,
-          role: 'admin' // Force admin role for this creation
         }
       }
     });
@@ -103,23 +144,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    setUserRole('accountant');
     setSession(null);
   };
 
-  const isAdmin = profile?.role === 'admin' || 
-    user?.email?.toLowerCase() === 'awep991@gmail.com' || 
-    user?.email?.toLowerCase() === 'abdaltyf2015.com@gmail.com';
+  const isAdmin = userRole === 'admin' || 
+    (user?.email ? ADMIN_EMAILS.includes(user.email.toLowerCase()) : false);
+
+  const isBranchManager = userRole === 'branch_manager';
+  
+  const isBranchManagerOrAdmin = isAdmin || isBranchManager;
 
   return (
     <AuthContext.Provider value={{
       user,
       profile,
+      userRole,
       session,
       loading,
       signIn,
       signUp,
       signOut,
-      isAdmin
+      isAdmin,
+      isBranchManager,
+      isBranchManagerOrAdmin
     }}>
       {children}
     </AuthContext.Provider>

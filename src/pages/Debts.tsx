@@ -322,7 +322,7 @@ export default function Debts() {
       if (error) throw error;
 
       // Create WhatsApp message
-      const message = `مرحباً ${debt.client_name}،\n\nنود تذكيركم بالمبلغ المستحق: ${debt.amount.toLocaleString()} ريال\nعن خدمة: ${debt.service_type}\n\nشكراً لتعاونكم 🙏`;
+      const message = `عزيزي العميل ${debt.client_name}، تحية طيبة من مؤسسة اشعار للنسخ والتصوير. نود تذكيركم بالمبلغ المتبقي وقدره ${(debt.amount - debt.paid_amount).toLocaleString()} ريال مقابل ${debt.service_type}. نرجو منكم سداد المبلغ. شاكرين لكم ثقتكم`;
       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
 

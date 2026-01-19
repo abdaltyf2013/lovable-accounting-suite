@@ -69,8 +69,8 @@ const statusConfig = {
   pending: { label: 'في الانتظار', color: 'bg-gray-100 text-gray-700' },
   in_progress: { label: 'قيد التنفيذ', color: 'bg-blue-100 text-blue-700' },
   paused: { label: 'متوقفة', color: 'bg-yellow-100 text-yellow-700' },
-  completed: { label: 'مكتملة', color: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'ملغاة', color: 'bg-red-100 text-red-700' }
+  completed: { label: 'مكتملة', color: 'bg-green-500 text-white' },
+  cancelled: { label: 'ملغاة', color: 'bg-red-500 text-white' }
 };
 
 const Tasks = () => {

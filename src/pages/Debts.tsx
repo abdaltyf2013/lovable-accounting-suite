@@ -449,7 +449,7 @@ export default function Debts() {
   const totalPending = pendingDebts.reduce((sum, d) => sum + d.amount, 0);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in px-2 md:px-4 py-4 md:py-8">
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-foreground">إدارة الديون</h1>
@@ -646,23 +646,23 @@ export default function Debts() {
                             </div>
                           )}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 justify-end">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => openNotesDialog(debt)}
-                            className="gap-1"
+                            className="gap-1 h-8 px-2 text-xs"
                           >
-                            <MessageSquare className="w-4 h-4" />
+                            <MessageSquare className="w-3 h-3" />
                             ملاحظات
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => openEditDialog(debt)}
-                            className="gap-1"
+                            className="gap-1 h-8 px-2 text-xs"
                           >
-                            <Pencil className="w-4 h-4" />
+                            <Pencil className="w-3 h-3" />
                             تعديل
                           </Button>
                           <Button
@@ -670,25 +670,26 @@ export default function Debts() {
                             variant="outline"
                             onClick={() => handleSendReminder(debt)}
                             disabled={!canSendReminder(debt)}
-                            className="gap-1"
+                            className="gap-1 h-8 px-2 text-xs"
                           >
-                            <Bell className="w-4 h-4" />
+                            <Bell className="w-3 h-3" />
                             تذكير
                           </Button>
                           <Button
                             size="sm"
                             onClick={() => openPaymentDialog(debt)}
-                            className="gap-1 bg-green-600 hover:bg-green-700"
+                            className="gap-1 h-8 px-2 text-xs bg-green-600 hover:bg-green-700"
                           >
-                            <CheckCircle className="w-4 h-4" />
+                            <CheckCircle className="w-3 h-3" />
                             سداد
                           </Button>
                           <Button
                             size="sm"
                             variant="destructive"
                             onClick={() => handleDeleteDebt(debt.id)}
+                            className="h-8 px-2"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                       </div>

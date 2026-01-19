@@ -285,7 +285,7 @@ const Tasks = () => {
         {filterTasks().length === 0 ? (
           <Card><CardContent className="py-12 text-center"><ListTodo className="w-12 h-12 mx-auto text-muted-foreground mb-4" /><p className="text-muted-foreground">لا توجد مهام</p></CardContent></Card>
         ) : filterTasks().map((task) => (
-          <Card key={task.id} className={`transition-all ${getTaskAgeColor(task.created_at)}`}>
+          <Card key={task.id} className={`transition-all border-2 dark:bg-slate-900/50 ${getTaskAgeColor(task.created_at)}`}>
             <Collapsible open={expandedTasks.has(task.id)} onOpenChange={() => setExpandedTasks(prev => { const s = new Set(prev); s.has(task.id) ? s.delete(task.id) : s.add(task.id); return s; })}>
               <CardContent className="py-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -295,11 +295,11 @@ const Tasks = () => {
                       <Badge className={priorityConfig[task.priority].color}>{priorityConfig[task.priority].label}</Badge>
                       <Badge className={statusConfig[task.status].color}>{statusConfig[task.status].label}</Badge>
                     </div>
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1"><User className="w-4 h-4" />{task.client_name}</span>
-                      {task.phone && <span className="flex items-center gap-1"><Phone className="w-4 h-4" />{task.phone}</span>}
-                      <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{format(new Date(task.due_date), 'yyyy/MM/dd')}</span>
-                      {task.started_by_name && <span className="flex items-center gap-1 text-blue-600"><AlertCircle className="w-4 h-4" />المنفذ: {task.started_by_name}</span>}
+                    <div className="flex flex-wrap gap-4 text-sm text-foreground/80 dark:text-white/90">
+                      <span className="flex items-center gap-1 font-medium"><User className="w-4 h-4 text-primary" />{task.client_name}</span>
+                      {task.phone && <span className="flex items-center gap-1 font-medium"><Phone className="w-4 h-4 text-primary" />{task.phone}</span>}
+                      <span className="flex items-center gap-1 font-medium"><Calendar className="w-4 h-4 text-primary" />{format(new Date(task.due_date), 'yyyy/MM/dd')}</span>
+                      {task.started_by_name && <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold"><AlertCircle className="w-4 h-4" />المنفذ: {task.started_by_name}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">

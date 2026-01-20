@@ -95,6 +95,7 @@ export type Database = {
           paid_amount: number
           service_type: string
           status: string
+          task_id: string | null
           updated_at: string
           work_completion_date: string
         }
@@ -110,6 +111,7 @@ export type Database = {
           paid_amount?: number
           service_type: string
           status?: string
+          task_id?: string | null
           updated_at?: string
           work_completion_date: string
         }
@@ -125,10 +127,19 @@ export type Database = {
           paid_amount?: number
           service_type?: string
           status?: string
+          task_id?: string | null
           updated_at?: string
           work_completion_date?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "debts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoice_items: {
         Row: {
@@ -180,6 +191,7 @@ export type Database = {
           invoice_number: string
           notes: string | null
           status: string
+          task_id: string | null
           tax_amount: number
           total_amount: number
           type: string
@@ -196,6 +208,7 @@ export type Database = {
           invoice_number: string
           notes?: string | null
           status?: string
+          task_id?: string | null
           tax_amount?: number
           total_amount?: number
           type: string
@@ -212,6 +225,7 @@ export type Database = {
           invoice_number?: string
           notes?: string | null
           status?: string
+          task_id?: string | null
           tax_amount?: number
           total_amount?: number
           type?: string
@@ -223,6 +237,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -333,15 +354,18 @@ export type Database = {
       tasks: {
         Row: {
           cancelled_at: string | null
+          client_id: string | null
           client_name: string
           completed_at: string | null
           created_at: string
           created_by: string | null
           description: string | null
           due_date: string
+          government_fees: number | null
           id: string
           phone: string | null
           priority: string
+          service_amount: number | null
           started_at: string | null
           started_by: string | null
           started_by_name: string | null
@@ -352,15 +376,18 @@ export type Database = {
         }
         Insert: {
           cancelled_at?: string | null
+          client_id?: string | null
           client_name: string
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           due_date: string
+          government_fees?: number | null
           id?: string
           phone?: string | null
           priority?: string
+          service_amount?: number | null
           started_at?: string | null
           started_by?: string | null
           started_by_name?: string | null
@@ -371,15 +398,18 @@ export type Database = {
         }
         Update: {
           cancelled_at?: string | null
+          client_id?: string | null
           client_name?: string
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           due_date?: string
+          government_fees?: number | null
           id?: string
           phone?: string | null
           priority?: string
+          service_amount?: number | null
           started_at?: string | null
           started_by?: string | null
           started_by_name?: string | null
@@ -388,7 +418,15 @@ export type Database = {
           total_work_time?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

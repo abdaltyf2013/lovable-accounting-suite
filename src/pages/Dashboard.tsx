@@ -149,6 +149,7 @@ export default function Dashboard() {
       }
 
       if (!isAdmin && profile?.full_name) {
+        const normalizedName = profile.full_name;
         const { data: rankingData } = await supabase
           .from('invoices')
           .select('accountant_name, total_amount')
@@ -156,13 +157,24 @@ export default function Dashboard() {
           .neq('status', 'cancelled')
           .gte('created_at', firstDayOfMonth);
         
+        // خريطة توحيد الأسماء المكررة
+        const nameMapping: Record<string, string> = {
+          "عبد اللطيف": "عبداللطيف علوي اليافعي",
+          "عبداللطيف": "عبداللطيف علوي اليافعي",
+          "عبد اللطيف علوي اليافعي": "عبداللطيف علوي اليافعي",
+          "فؤاد مكتب اشعار": "فؤاد خليل",
+          "فواد خليل": "فؤاد خليل",
+          "فؤاد مكتب إشعار": "فؤاد خليل",
+        };
+        
         const ranking = (rankingData || []).reduce((acc: any, curr) => {
-          acc[curr.accountant_name] = (acc[curr.accountant_name] || 0) + Number(curr.total_amount);
+          const normalizedAccountantName = nameMapping[curr.accountant_name] || curr.accountant_name;
+          acc[normalizedAccountantName] = (acc[normalizedAccountantName] || 0) + Number(curr.total_amount);
           return acc;
         }, {});
         
         const sortedRanking = Object.entries(ranking).sort((a: any, b: any) => b[1] - a[1]);
-        myRank = sortedRanking.findIndex(r => r[0] === profile.full_name) + 1;
+        myRank = sortedRanking.findIndex(r => r[0] === normalizedName) + 1;
 
         const { data: settledData } = await supabase
           .from('invoices')
@@ -299,7 +311,7 @@ export default function Dashboard() {
             مرحباً، {profile?.full_name}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {isAdmin ? 'لوحة تحكم المدير' : 'لوحة تحكم المحاسب'}
+            لوحة التحكم
           </p>
         </div>
         {isAdmin && overdueTasks.length > 0 && (

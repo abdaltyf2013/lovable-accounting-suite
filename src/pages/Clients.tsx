@@ -24,6 +24,12 @@ interface Client {
   email: string | null;
   address: string | null;
   notes: string | null;
+  national_id: string | null;
+  password: string | null;
+  commercial_registration: string | null;
+  license_number: string | null;
+  account_passwords: string | null;
+  secret_notes: string | null;
   created_at: string;
 }
 
@@ -42,6 +48,12 @@ export default function Clients() {
     email: '',
     address: '',
     notes: '',
+    national_id: '',
+    password: '',
+    commercial_registration: '',
+    license_number: '',
+    account_passwords: '',
+    secret_notes: '',
   });
 
   useEffect(() => {
@@ -72,6 +84,12 @@ export default function Clients() {
           email: formData.email || null,
           address: formData.address || null,
           notes: formData.notes || null,
+          national_id: formData.national_id || null,
+          password: formData.password || null,
+          commercial_registration: formData.commercial_registration || null,
+          license_number: formData.license_number || null,
+          account_passwords: formData.account_passwords || null,
+          secret_notes: formData.secret_notes || null,
         })
         .eq('id', editingClient.id);
 
@@ -89,6 +107,12 @@ export default function Clients() {
         email: formData.email || null,
         address: formData.address || null,
         notes: formData.notes || null,
+        national_id: formData.national_id || null,
+        password: formData.password || null,
+        commercial_registration: formData.commercial_registration || null,
+        license_number: formData.license_number || null,
+        account_passwords: formData.account_passwords || null,
+        secret_notes: formData.secret_notes || null,
         created_by: user?.id,
       });
 
@@ -116,7 +140,19 @@ export default function Clients() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', phone: '', email: '', address: '', notes: '' });
+    setFormData({ 
+      name: '', 
+      phone: '', 
+      email: '', 
+      address: '', 
+      notes: '',
+      national_id: '',
+      password: '',
+      commercial_registration: '',
+      license_number: '',
+      account_passwords: '',
+      secret_notes: '',
+    });
     setEditingClient(null);
     setDialogOpen(false);
   };
@@ -129,6 +165,12 @@ export default function Clients() {
       email: client.email || '',
       address: client.address || '',
       notes: client.notes || '',
+      national_id: client.national_id || '',
+      password: client.password || '',
+      commercial_registration: client.commercial_registration || '',
+      license_number: client.license_number || '',
+      account_passwords: client.account_passwords || '',
+      secret_notes: client.secret_notes || '',
     });
     setDialogOpen(true);
   };
@@ -202,6 +244,73 @@ export default function Clients() {
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
               </div>
+
+              {/* بيانات سرية */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-sm font-semibold mb-3 text-orange-600">🔒 بيانات سرية (للمدراء فقط)</h3>
+                
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="national_id">رقم الهوية الوطنية</Label>
+                    <Input
+                      id="national_id"
+                      value={formData.national_id}
+                      onChange={(e) => setFormData({ ...formData, national_id: e.target.value })}
+                      placeholder="مثال: 1234567890"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">كلمة السر</Label>
+                    <Input
+                      id="password"
+                      type="text"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="commercial_registration">رقم السجل التجاري</Label>
+                    <Input
+                      id="commercial_registration"
+                      value={formData.commercial_registration}
+                      onChange={(e) => setFormData({ ...formData, commercial_registration: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="license_number">رقم الترخيص</Label>
+                    <Input
+                      id="license_number"
+                      value={formData.license_number}
+                      onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="account_passwords">كلمات المرور (للحسابات المختلفة)</Label>
+                    <Textarea
+                      id="account_passwords"
+                      value={formData.account_passwords}
+                      onChange={(e) => setFormData({ ...formData, account_passwords: e.target.value })}
+                      placeholder="مثال:\nأبشر: 123456\nنافذ: password123\nالبنك: abc@123"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="secret_notes">ملاحظات سرية</Label>
+                    <Textarea
+                      id="secret_notes"
+                      value={formData.secret_notes}
+                      onChange={(e) => setFormData({ ...formData, secret_notes: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <Button type="submit" className="flex-1">
                   {editingClient ? 'تحديث' : 'إضافة'}

@@ -17,6 +17,12 @@ interface Client {
   email: string | null;
   address: string | null;
   notes: string | null;
+  national_id: string | null;
+  password: string | null;
+  commercial_registration: string | null;
+  license_number: string | null;
+  account_passwords: string | null;
+  secret_notes: string | null;
   created_at: string;
 }
 
@@ -236,6 +242,65 @@ export default function ClientProfile() {
           )}
         </CardContent>
       </Card>
+
+      {/* بيانات سرية (للمدراء فقط) */}
+      {isAdmin && (
+        <Card className="border-orange-200 bg-orange-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-700">
+              <span>🔒</span>
+              <span>بيانات سرية</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {client.national_id && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">رقم الهوية الوطنية</p>
+                  <p className="text-sm font-mono">{client.national_id}</p>
+                </div>
+              )}
+              {client.password && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">كلمة السر</p>
+                  <p className="text-sm font-mono">{client.password}</p>
+                </div>
+              )}
+              {client.commercial_registration && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">رقم السجل التجاري</p>
+                  <p className="text-sm font-mono">{client.commercial_registration}</p>
+                </div>
+              )}
+              {client.license_number && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">رقم الترخيص</p>
+                  <p className="text-sm font-mono">{client.license_number}</p>
+                </div>
+              )}
+            </div>
+            
+            {client.account_passwords && (
+              <div className="mt-4 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">كلمات المرور</p>
+                <pre className="text-sm bg-white p-3 rounded border whitespace-pre-wrap font-mono">{client.account_passwords}</pre>
+              </div>
+            )}
+            
+            {client.secret_notes && (
+              <div className="mt-4 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">ملاحظات سرية</p>
+                <div className="text-sm bg-white p-3 rounded border">{client.secret_notes}</div>
+              </div>
+            )}
+
+            {!client.national_id && !client.password && !client.commercial_registration && 
+             !client.license_number && !client.account_passwords && !client.secret_notes && (
+              <p className="text-sm text-muted-foreground text-center py-4">لا توجد بيانات سرية لهذا العميل</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* مؤشرات الأداء */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

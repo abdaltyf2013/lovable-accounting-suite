@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Users, TrendingUp, TrendingDown, DollarSign, Trophy, History, AlertTriangle, Calendar, Clock, Wallet, UserCheck } from 'lucide-react';
+import { FileText, Users, TrendingUp, TrendingDown, DollarSign, Trophy, History, AlertTriangle, Calendar, Clock, Wallet, UserCheck, CheckCircle2, ListTodo, Award } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { format, isBefore, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 interface Stats {
   totalClients: number;
@@ -43,6 +44,28 @@ interface AccountantPerformance {
   total: number;
 }
 
+interface Task {
+  id: string;
+  title: string;
+  status: string;
+  due_date: string;
+  client_name: string;
+}
+
+interface TopAccountant {
+  name: string;
+  total: number;
+  rank: number;
+}
+
+interface AccountantStats {
+  completedTasks: number;
+  currentTasks: number;
+  totalRevenue: number;
+  avgCompletionTime: number;
+  tasksThisMonth: number;
+}
+
 export default function Dashboard() {
   const { profile, isAdmin } = useAuth();
   const [stats, setStats] = useState<Stats>({
@@ -63,6 +86,16 @@ export default function Dashboard() {
   const [overdueTasks, setOverdueTasks] = useState<OverdueTask[]>([]);
   const [performance, setPerformance] = useState<AccountantPerformance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [topAccountants, setTopAccountants] = useState<TopAccountant[]>([]);
+  const [accountantStats, setAccountantStats] = useState<AccountantStats>({
+    completedTasks: 0,
+    currentTasks: 0,
+    totalRevenue: 0,
+    avgCompletionTime: 0,
+    tasksThisMonth: 0,
+  });
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchStats();
@@ -70,7 +103,12 @@ export default function Dashboard() {
     if (isAdmin) {
       fetchOverdueTasks();
     }
-  }, [isAdmin]);
+    if (!isAdmin) {
+      fetchAllTasks();
+      fetchTopAccountants();
+      fetchAccountantStats();
+    }
+  }, [isAdmin, profile]);
 
   const fetchOverdueTasks = async () => {
     try {
@@ -274,6 +312,124 @@ export default function Dashboard() {
       .order('created_at', { ascending: false })
       .limit(5);
     setRecentInvoices(data || []);
+  };
+
+  const fetchAllTasks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id, title, status, due_date, client_name')
+        .order('created_at', { ascending: false })
+        .limit(6);
+      
+      if (error) throw error;
+      setAllTasks(data || []);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
+
+  const fetchTopAccountants = async () => {
+    try {
+      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('accountant_name, total_amount')
+        .eq('type', 'sales')
+        .neq('status', 'cancelled')
+        .gte('created_at', firstDayOfMonth);
+      
+      if (error) throw error;
+
+      const nameMapping: Record<string, string> = {
+        "عبد اللطيف": "عبداللطيف علوي اليافعي",
+        "عبداللطيف": "عبداللطيف علوي اليافعي",
+        "عبد اللطيف علوي اليافعي": "عبداللطيف علوي اليافعي",
+        "فؤاد مكتب اشعار": "فؤاد خليل",
+        "فواد خليل": "فؤاد خليل",
+        "فؤاد مكتب إشعار": "فؤاد خليل",
+      };
+      
+      const totals = (data || []).reduce((acc: any, curr) => {
+        const normalizedName = nameMapping[curr.accountant_name] || curr.accountant_name;
+        acc[normalizedName] = (acc[normalizedName] || 0) + Number(curr.total_amount);
+        return acc;
+      }, {});
+      
+      const sorted = Object.entries(totals)
+        .map(([name, total]: [string, any]) => ({ name, total, rank: 0 }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 3)
+        .map((item, index) => ({ ...item, rank: index + 1 }));
+      
+      setTopAccountants(sorted);
+    } catch (error) {
+      console.error('Error fetching top accountants:', error);
+    }
+  };
+
+  const fetchAccountantStats = async () => {
+    try {
+      if (!profile?.full_name) return;
+
+      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+
+      // المهام المنجزة
+      const { data: completed } = await supabase
+        .from('tasks')
+        .select('id, started_at, completed_at')
+        .eq('accountant_name', profile.full_name)
+        .eq('status', 'completed');
+
+      // المهام الحالية
+      const { data: current } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('accountant_name', profile.full_name)
+        .in('status', ['pending', 'in_progress']);
+
+      // المهام هذا الشهر
+      const { data: thisMonth } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('accountant_name', profile.full_name)
+        .gte('created_at', firstDayOfMonth);
+
+      // إجمالي الإيرادات
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('total_amount')
+        .eq('accountant_name', profile.full_name)
+        .eq('type', 'sales')
+        .neq('status', 'cancelled');
+
+      const totalRevenue = (invoices || []).reduce((sum, inv) => sum + Number(inv.total_amount), 0);
+
+      // متوسط وقت الإنجاز
+      let avgTime = 0;
+      if (completed && completed.length > 0) {
+        const validTasks = completed.filter(t => t.started_at && t.completed_at);
+        if (validTasks.length > 0) {
+          const totalTime = validTasks.reduce((sum, task) => {
+            const start = new Date(task.started_at).getTime();
+            const end = new Date(task.completed_at).getTime();
+            return sum + (end - start);
+          }, 0);
+          avgTime = Math.round(totalTime / validTasks.length / (1000 * 60 * 60)); // بالساعات
+        }
+      }
+
+      setAccountantStats({
+        completedTasks: completed?.length || 0,
+        currentTasks: current?.length || 0,
+        totalRevenue,
+        avgCompletionTime: avgTime,
+        tasksThisMonth: thisMonth?.length || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching accountant stats:', error);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -564,10 +720,197 @@ export default function Dashboard() {
       )}
 
       {!isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">آخر الفواتير</CardTitle>
-          </CardHeader>
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* قائمة المهمات العامة */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                <CardTitle className="text-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ListTodo className="w-5 h-5 text-blue-600" />
+                    <span>المهمات العامة</span>
+                  </div>
+                  <button
+                    onClick={() => navigate('/tasks')}
+                    className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full hover:bg-blue-700 transition-colors"
+                  >
+                    عرض الكل
+                  </button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {allTasks.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">لا توجد مهمات حالياً</p>
+                ) : (
+                  <div className="divide-y">
+                    {allTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        onClick={() => navigate('/tasks')}
+                        className="p-4 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-sm group-hover:text-blue-600 transition-colors">{task.title}</h4>
+                          <span className={`text-[10px] px-2 py-1 rounded-full font-medium ${
+                            task.status === 'completed' 
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : task.status === 'in_progress'
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                              : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                          }`}>
+                            {task.status === 'completed' ? 'مكتملة' : task.status === 'in_progress' ? 'جارية' : 'معلقة'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            {task.client_name}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {format(parseISO(task.due_date), 'yyyy/MM/dd')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* موظف الشهر Top 3 */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Award className="w-5 h-5 text-yellow-600" />
+                  <span>موظف الشهر 🏆</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {topAccountants.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">لا توجد بيانات كافية</p>
+                ) : (
+                  <div className="space-y-4">
+                    {topAccountants.map((acc) => (
+                      <div
+                        key={acc.rank}
+                        className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
+                          acc.rank === 1
+                            ? 'bg-gradient-to-r from-yellow-100 to-amber-100 dark:from-yellow-900/30 dark:to-amber-900/30 shadow-md scale-105'
+                            : acc.rank === 2
+                            ? 'bg-gradient-to-r from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-800'
+                            : 'bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30'
+                        }`}
+                      >
+                        <div className="text-4xl">
+                          {acc.rank === 1 ? '🥇' : acc.rank === 2 ? '🥈' : '🥉'}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-base">{acc.name}</p>
+                          {acc.rank === 1 && (
+                            <p className="text-xs text-yellow-700 dark:text-yellow-400 font-semibold mt-1">⭐ موظف الشهر</p>
+                          )}
+                        </div>
+                        <div className={`text-2xl font-bold ${
+                          acc.rank === 1
+                            ? 'text-yellow-600'
+                            : acc.rank === 2
+                            ? 'text-gray-600 dark:text-gray-400'
+                            : 'text-orange-600'
+                        }`}>
+                          #{acc.rank}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* إحصائيات المحاسب */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-purple-600" />
+                <span>إحصائياتي 📊</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-right py-4 px-6 text-sm font-semibold">المؤشر</th>
+                      <th className="text-center py-4 px-6 text-sm font-semibold">القيمة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors">
+                      <td className="py-4 px-6 text-sm flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span className="font-medium">عدد المهمات المنجزة</span>
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        <span className="inline-flex items-center justify-center bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-4 py-1 rounded-full font-bold text-sm">
+                          {accountantStats.completedTasks}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-b hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors">
+                      <td className="py-4 px-6 text-sm flex items-center gap-2">
+                        <ListTodo className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium">عدد المهمات الحالية</span>
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        <span className="inline-flex items-center justify-center bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-4 py-1 rounded-full font-bold text-sm">
+                          {accountantStats.currentTasks}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-b hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors">
+                      <td className="py-4 px-6 text-sm flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-emerald-600" />
+                        <span className="font-medium">إجمالي الإيرادات</span>
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        <span className="inline-flex items-center justify-center bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-4 py-1 rounded-full font-bold text-sm">
+                          {formatCurrency(accountantStats.totalRevenue)}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-b hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors">
+                      <td className="py-4 px-6 text-sm flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-indigo-600" />
+                        <span className="font-medium">متوسط وقت الإنجاز</span>
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        <span className="inline-flex items-center justify-center bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 px-4 py-1 rounded-full font-bold text-sm">
+                          {accountantStats.avgCompletionTime > 0 ? `${accountantStats.avgCompletionTime} ساعة` : '-'}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors">
+                      <td className="py-4 px-6 text-sm flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-purple-600" />
+                        <span className="font-medium">المهمات هذا الشهر</span>
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        <span className="inline-flex items-center justify-center bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-4 py-1 rounded-full font-bold text-sm">
+                          {accountantStats.tasksThisMonth}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">آخر الفواتير</CardTitle>
+            </CardHeader>
           <CardContent>
             {recentInvoices.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
@@ -621,6 +964,7 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        </>
       )}
     </div>
   );

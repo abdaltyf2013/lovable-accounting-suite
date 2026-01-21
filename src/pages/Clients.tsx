@@ -75,10 +75,32 @@ export default function Clients() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editingClient) {
-      const { error } = await supabase
-        .from('clients')
-        .update({
+    try {
+      if (editingClient) {
+        const { error } = await supabase
+          .from('clients')
+          .update({
+            name: formData.name,
+            phone: formData.phone || null,
+            email: formData.email || null,
+            address: formData.address || null,
+            notes: formData.notes || null,
+            national_id: formData.national_id || null,
+            password: formData.password || null,
+            commercial_registration: formData.commercial_registration || null,
+            license_number: formData.license_number || null,
+            account_passwords: formData.account_passwords || null,
+            secret_notes: formData.secret_notes || null,
+          })
+          .eq('id', editingClient.id);
+
+        if (error) throw error;
+        
+        toast({ title: 'تم التحديث', description: 'تم تحديث بيانات العميل بنجاح' });
+        await fetchClients();
+        resetForm();
+      } else {
+        const { error } = await supabase.from('clients').insert({
           name: formData.name,
           phone: formData.phone || null,
           email: formData.email || null,
@@ -90,39 +112,22 @@ export default function Clients() {
           license_number: formData.license_number || null,
           account_passwords: formData.account_passwords || null,
           secret_notes: formData.secret_notes || null,
-        })
-        .eq('id', editingClient.id);
+          created_by: user?.id,
+        });
 
-      if (error) {
-        toast({ title: 'خطأ', description: 'فشل في تحديث العميل', variant: 'destructive' });
-      } else {
-        toast({ title: 'تم التحديث', description: 'تم تحديث بيانات العميل بنجاح' });
-        fetchClients();
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase.from('clients').insert({
-        name: formData.name,
-        phone: formData.phone || null,
-        email: formData.email || null,
-        address: formData.address || null,
-        notes: formData.notes || null,
-        national_id: formData.national_id || null,
-        password: formData.password || null,
-        commercial_registration: formData.commercial_registration || null,
-        license_number: formData.license_number || null,
-        account_passwords: formData.account_passwords || null,
-        secret_notes: formData.secret_notes || null,
-        created_by: user?.id,
-      });
-
-      if (error) {
-        toast({ title: 'خطأ', description: 'فشل في إضافة العميل', variant: 'destructive' });
-      } else {
+        if (error) throw error;
+        
         toast({ title: 'تمت الإضافة', description: 'تم إضافة العميل بنجاح' });
-        fetchClients();
+        await fetchClients();
         resetForm();
       }
+    } catch (error) {
+      console.error('Error submitting client:', error);
+      toast({ 
+        title: 'خطأ', 
+        description: editingClient ? 'فشل في تحديث العميل' : 'فشل في إضافة العميل', 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -197,7 +202,7 @@ export default function Clients() {
               إضافة عميل
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingClient ? 'تعديل العميل' : 'إضافة عميل جديد'}</DialogTitle>
             </DialogHeader>

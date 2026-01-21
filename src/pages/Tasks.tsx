@@ -337,40 +337,25 @@ const Tasks = () => {
         type: 'sales',
         client_id: selectedTask.client_id,
         client_name: selectedTask.client_name,
-        amount: totalAmount,
+        amount: netProfit,
         tax_amount: 0,
-        total_amount: totalAmount,
+        total_amount: netProfit,
         status: paymentType === 'cash' ? 'paid' : 'pending',
-        notes: `فاتورة تلقائية من مهمة: ${selectedTask.title}`,
+        notes: `فاتورة تلقائية من مهمة: ${selectedTask.title} (صافي الربح بعد خصم الرسوم الحكومية)`,
         accountant_name: profile?.full_name || user?.email,
         created_by: user?.id,
         task_id: selectedTask.id
       }).select().single();
 
-      // 5. إضافة بنود الفاتورة
-      if (invoiceData) {
-        const invoiceItems = [];
-        if (netProfit > 0) {
-          invoiceItems.push({
-            invoice_id: invoiceData.id,
-            description: `أتعاب خدمة: ${selectedTask.title}`,
-            quantity: 1,
-            unit_price: netProfit,
-            total: netProfit
-          });
-        }
-        if (governmentFees > 0) {
-          invoiceItems.push({
-            invoice_id: invoiceData.id,
-            description: 'رسوم حكومية',
-            quantity: 1,
-            unit_price: governmentFees,
-            total: governmentFees
-          });
-        }
-        if (invoiceItems.length > 0) {
-          await supabase.from('invoice_items').insert(invoiceItems);
-        }
+      // 5. إضافة بنود الفاتورة (صافي الربح فقط)
+      if (invoiceData && netProfit > 0) {
+        await supabase.from('invoice_items').insert({
+          invoice_id: invoiceData.id,
+          description: `صافي ربح خدمة: ${selectedTask.title} (مبلغ الخدمة: ${totalAmount} - رسوم حكومية: ${governmentFees})`,
+          quantity: 1,
+          unit_price: netProfit,
+          total: netProfit
+        });
       }
 
       // 6. إنشاء دين جديد فقط إذا كانت طريقة السداد "إضافة للديون" وكان المستخدم admin
@@ -382,7 +367,7 @@ const Tasks = () => {
           paid_amount: 0,
           work_completion_date: new Date().toISOString().split('T')[0],
           expected_payment_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          notes: `مرتبط بفاتورة: ${invoiceNumber}`,
+          notes: `مرتبط بفاتورة: ${invoiceNumber} (مبلغ الخدمة فقط بدون رسوم)`,
           created_by: user?.id,
           task_id: selectedTask.id
         });

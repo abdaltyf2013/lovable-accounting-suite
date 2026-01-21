@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Eye, Trash2, FileText, Printer } from 'lucide-react';
 import InvoicePrintTemplate from '@/components/InvoicePrintTemplate';
@@ -90,24 +90,12 @@ export default function Invoices({ type }: InvoicesPageProps) {
     { description: '', quantity: 1, unit_price: 0, total: 0 },
   ]);
 
-  const [includeTax, setIncludeTax] = useState(true);
-  const [taxEnabledByAdmin, setTaxEnabledByAdmin] = useState(true);
-  const TAX_RATE = 0.15; // 15% VAT
+  // تم إلغاء الضريبة
 
   useEffect(() => {
     fetchInvoices();
     fetchClients();
-    loadTaxSetting();
   }, [type]);
-
-  const loadTaxSetting = () => {
-    const savedTax = localStorage.getItem('tax_enabled');
-    if (savedTax !== null) {
-      const isEnabled = savedTax === 'true';
-      setTaxEnabledByAdmin(isEnabled);
-      setIncludeTax(isEnabled);
-    }
-  };
 
   const fetchInvoices = async () => {
     const { data, error } = await supabase
@@ -154,8 +142,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
 
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const tax = includeTax ? subtotal * TAX_RATE : 0;
-    return { subtotal, tax, total: subtotal + tax };
+    return { subtotal, tax: 0, total: subtotal };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -438,19 +425,6 @@ export default function Invoices({ type }: InvoicesPageProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-0.5">
-                      <Label>تضمين ضريبة القيمة المضافة (15%)</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {taxEnabledByAdmin ? 'سيتم إضافة الضريبة تلقائياً' : 'الضريبة معطلة من الإعدادات'}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={includeTax}
-                      onCheckedChange={setIncludeTax}
-                      disabled={!taxEnabledByAdmin}
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label>حالة الدفع</Label>
                     <Select
@@ -471,15 +445,7 @@ export default function Invoices({ type }: InvoicesPageProps) {
 
                 <Card>
                   <CardContent className="pt-6 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>المجموع الفرعي:</span>
-                      <span>{formatCurrency(calculateTotals().subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>الضريبة:</span>
-                      <span>{formatCurrency(calculateTotals().tax)}</span>
-                    </div>
-                    <div className="flex justify-between text-lg font-bold border-t pt-2">
+                    <div className="flex justify-between text-lg font-bold">
                       <span>الإجمالي:</span>
                       <span>{formatCurrency(calculateTotals().total)}</span>
                     </div>

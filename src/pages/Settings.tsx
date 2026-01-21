@@ -10,22 +10,15 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings as SettingsIcon, Moon, Sun, Percent } from 'lucide-react';
+import { Settings as SettingsIcon, Moon, Sun } from 'lucide-react';
 
 export default function Settings() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
-  const [taxEnabled, setTaxEnabled] = useState(true);
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    // تحميل الإعدادات من localStorage
-    const savedTax = localStorage.getItem('tax_enabled');
     const savedTheme = localStorage.getItem('theme');
-    
-    if (savedTax !== null) {
-      setTaxEnabled(savedTax === 'true');
-    }
     if (savedTheme) {
       setThemeMode(savedTheme as 'light' | 'dark');
     }
@@ -42,16 +35,6 @@ export default function Settings() {
       document.documentElement.classList.remove('dark');
     }
 
-    toast({
-      title: 'تم التحديث',
-      description: 'تم حفظ الإعدادات بنجاح',
-    });
-  };
-
-  const toggleTax = (checked: boolean) => {
-    setTaxEnabled(checked);
-    localStorage.setItem('tax_enabled', String(checked));
-    
     toast({
       title: 'تم التحديث',
       description: 'تم حفظ الإعدادات بنجاح',
@@ -101,26 +84,6 @@ export default function Settings() {
               />
               <Moon className="w-4 h-4 text-muted-foreground" />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Percent className="w-5 h-5" />
-              الإعدادات المالية
-            </CardTitle>
-            <CardDescription>التحكم في الضرائب والرسوم</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>تفعيل ضريبة القيمة المضافة (15%)</Label>
-              <p className="text-xs text-muted-foreground">عند التعطيل، لن يتم حساب الضريبة في الفواتير الجديدة</p>
-            </div>
-            <Switch 
-              checked={taxEnabled} 
-              onCheckedChange={toggleTax} 
-            />
           </CardContent>
         </Card>
       </div>

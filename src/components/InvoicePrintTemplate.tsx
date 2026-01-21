@@ -130,20 +130,9 @@ const InvoicePrintTemplate = forwardRef<HTMLDivElement, InvoicePrintTemplateProp
         {/* Totals */}
         <div className="flex justify-end mb-16">
           <div className="w-full max-w-md space-y-4">
-            <div className="flex justify-between p-3 border-b-4 border-gray-100">
-              <span className="text-xl text-gray-600 font-bold">المجموع الفرعي</span>
-              <span className="text-xl font-bold text-gray-900">{formatCurrency(Number(invoice.amount))}</span>
-            </div>
-            {Number(invoice.tax_amount) > 0 && (
-              <div className="flex justify-between p-3 border-b-4 border-gray-100">
-                <span className="text-xl text-gray-600 font-bold">الضريبة (15%)</span>
-                <span className="text-xl font-bold text-gray-900">{formatCurrency(Number(invoice.tax_amount))}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between p-8 bg-gray-900 text-white rounded-3xl shadow-2xl mt-6">
-              <span className="text-3xl font-black">الإجمالي النهائي</span>
-              <span className="text-5xl font-black">{formatCurrency(Number(invoice.total_amount))}</span>
+            <div className="flex justify-between p-8 bg-gray-900 text-white rounded-3xl shadow-2xl">
+              <span className="text-3xl font-black">الإجمالي</span>
+              <span className="text-5xl font-black">{formatCurrency(Number(invoice.amount))}</span>
             </div>
           </div>
         </div>

@@ -342,6 +342,7 @@ export default function Dashboard() {
       
       if (error) throw error;
 
+      // خريطة توحيد الأسماء المكررة (نفس المنطق المستخدم في حساب الترتيب للمحاسب)
       const nameMapping: Record<string, string> = {
         "عبد اللطيف": "عبداللطيف علوي اليافعي",
         "عبداللطيف": "عبداللطيف علوي اليافعي",
@@ -351,18 +352,25 @@ export default function Dashboard() {
         "فؤاد مكتب إشعار": "فؤاد خليل",
       };
       
+      // حساب إجمالي المبيعات لكل محاسب مع توحيد الأسماء
       const totals = (data || []).reduce((acc: any, curr) => {
+        if (!curr.accountant_name) return acc; // تجاهل الفواتير بدون اسم محاسب
         const normalizedName = nameMapping[curr.accountant_name] || curr.accountant_name;
         acc[normalizedName] = (acc[normalizedName] || 0) + Number(curr.total_amount);
         return acc;
       }, {});
       
+      console.log('Top Accountants - Totals:', totals);
+      
+      // ترتيب المحاسبين وأخذ أفضل 3
       const sorted = Object.entries(totals)
+        .filter(([name, total]) => name && name !== 'غير محدد') // تصفية الأسماء الفارغة
         .map(([name, total]: [string, any]) => ({ name, total, rank: 0 }))
         .sort((a, b) => b.total - a.total)
         .slice(0, 3)
         .map((item, index) => ({ ...item, rank: index + 1 }));
       
+      console.log('Top Accountants - Sorted:', sorted);
       setTopAccountants(sorted);
     } catch (error) {
       console.error('Error fetching top accountants:', error);

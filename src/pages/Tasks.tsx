@@ -187,9 +187,30 @@ const Tasks = () => {
     } catch { toast.error("خطأ في إضافة العميل"); }
   };
 
-  const handleSelectClient = (client: Client) => {
+  const handleSelectClient = async (client: Client) => {
     setFormData(p => ({ ...p, client_id: client.id, client_name: client.name, phone: client.phone || p.phone }));
     setClientSearchOpen(false);
+    
+    // التحقق من الديون المتأخرة (للمدراء فقط)
+    if (isAdmin) {
+      try {
+        const { data: overdueDebts } = await supabase
+          .from('debts')
+          .select('amount, paid_amount')
+          .eq('client_name', client.name)
+          .eq('status', 'overdue');
+        
+        if (overdueDebts && overdueDebts.length > 0) {
+          const totalOverdue = overdueDebts.reduce((sum, d) => sum + (d.amount - d.paid_amount), 0);
+          toast.warning(
+            `⚠️ تنبيه: هذا العميل لديه ${overdueDebts.length} دين متأخر بقيمة ${totalOverdue.toFixed(2)} ريال`,
+            { duration: 6000 }
+          );
+        }
+      } catch (error) {
+        console.error('Error checking overdue debts:', error);
+      }
+    }
   };
 
   const handleAddTask = async () => {

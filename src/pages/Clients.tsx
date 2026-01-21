@@ -14,7 +14,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Client {
   id: string;
@@ -28,6 +29,7 @@ interface Client {
 
 export default function Clients() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -241,6 +243,15 @@ export default function Clients() {
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{client.name}</CardTitle>
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => navigate(`/clients/${client.id}`)}
+                      title="عرض ملف العميل"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

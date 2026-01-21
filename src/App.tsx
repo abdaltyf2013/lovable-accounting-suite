@@ -17,6 +17,7 @@ import AuditLog from "@/pages/AuditLog";
 import Settings from "@/pages/Settings";
 import Debts from "@/pages/Debts";
 import Tasks from "@/pages/Tasks";
+import ClientProfile from "@/pages/ClientProfile";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route element={<MainLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/clients" element={<Clients />} />
+              <Route path="/clients/:id" element={<ClientProfile />} />
               <Route path="/sales" element={<Invoices type="sales" />} />
               <Route path="/purchases" element={<Invoices type="purchase" />} />
               <Route path="/accountants" element={<Accountants />} />

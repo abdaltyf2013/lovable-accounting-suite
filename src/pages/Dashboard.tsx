@@ -18,6 +18,9 @@ interface Stats {
   myRank?: number;
   totalSettled?: number;
   cashBalance: number;
+  avgTaskCompletionTime?: number;
+  onTimeCompletionRate?: number;
+  debtCollectionRate?: number;
 }
 
 interface ChartData {
@@ -51,6 +54,9 @@ export default function Dashboard() {
     pendingInvoices: 0,
     todaySales: 0,
     cashBalance: 0,
+    avgTaskCompletionTime: 0,
+    onTimeCompletionRate: 0,
+    debtCollectionRate: 0,
   });
   const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
@@ -185,6 +191,60 @@ export default function Dashboard() {
         totalSettled = (settledData || []).reduce((sum, i) => sum + Number(i.total_amount), 0);
       }
 
+      // حساب مؤشرات الأداء الذكية
+      let avgTaskCompletionTime = 0;
+      let onTimeCompletionRate = 0;
+      let debtCollectionRate = 0;
+
+      if (isAdmin) {
+        // متوسط وقت إنجاز المهمة
+        const { data: completedTasks } = await supabase
+          .from('tasks')
+          .select('started_at, completed_at')
+          .eq('status', 'completed')
+          .not('started_at', 'is', null)
+          .not('completed_at', 'is', null)
+          .gte('completed_at', firstDayOfMonth);
+
+        if (completedTasks && completedTasks.length > 0) {
+          const totalTime = completedTasks.reduce((sum, task) => {
+            const start = new Date(task.started_at).getTime();
+            const end = new Date(task.completed_at).getTime();
+            return sum + (end - start);
+          }, 0);
+          avgTaskCompletionTime = Math.round(totalTime / completedTasks.length / (1000 * 60 * 60)); // بالساعات
+        }
+
+        // نسبة المهام المكتملة في الوقت المحدد
+        const { data: allCompletedTasks } = await supabase
+          .from('tasks')
+          .select('due_date, completed_at')
+          .eq('status', 'completed')
+          .gte('completed_at', firstDayOfMonth);
+
+        if (allCompletedTasks && allCompletedTasks.length > 0) {
+          const onTime = allCompletedTasks.filter(task => {
+            const dueDate = new Date(task.due_date);
+            const completedDate = new Date(task.completed_at);
+            return completedDate <= dueDate;
+          }).length;
+          onTimeCompletionRate = Math.round((onTime / allCompletedTasks.length) * 100);
+        }
+
+        // معدل تحصيل الديون
+        const { data: allDebts } = await supabase
+          .from('debts')
+          .select('amount, paid_amount');
+
+        if (allDebts && allDebts.length > 0) {
+          const totalDebtAmount = allDebts.reduce((sum, d) => sum + d.amount, 0);
+          const totalPaidAmount = allDebts.reduce((sum, d) => sum + d.paid_amount, 0);
+          if (totalDebtAmount > 0) {
+            debtCollectionRate = Math.round((totalPaidAmount / totalDebtAmount) * 100);
+          }
+        }
+      }
+
       setStats({
         totalClients: clientsRes.count || 0,
         totalSalesInvoices: salesInvoices.length,
@@ -196,6 +256,9 @@ export default function Dashboard() {
         myRank,
         totalSettled,
         cashBalance: totalSalesAllTime - totalPurchasesAllTime,
+        avgTaskCompletionTime,
+        onTimeCompletionRate,
+        debtCollectionRate,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -262,6 +325,27 @@ export default function Dashboard() {
       icon: Users,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100',
+    },
+    {
+      title: 'متوسط وقت إنجاز المهمة',
+      value: stats.avgTaskCompletionTime ? `${stats.avgTaskCompletionTime} ساعة` : '-',
+      icon: Clock,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-100',
+    },
+    {
+      title: 'نسبة الإنجاز في الوقت',
+      value: stats.onTimeCompletionRate ? `${stats.onTimeCompletionRate}%` : '-',
+      icon: Calendar,
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-100',
+    },
+    {
+      title: 'معدل تحصيل الديون',
+      value: stats.debtCollectionRate ? `${stats.debtCollectionRate}%` : '-',
+      icon: TrendingUp,
+      color: 'text-cyan-600',
+      bgColor: 'bg-cyan-100',
     },
   ] : [
     {

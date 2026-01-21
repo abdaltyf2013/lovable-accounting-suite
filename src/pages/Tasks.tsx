@@ -308,10 +308,8 @@ const Tasks = () => {
         notes: `المبلغ الإجمالي: ${totalAmount} ريال - الرسوم: ${governmentFees} ريال - صافي الربح: ${netProfit} ريال - طريقة السداد: ${paymentType === 'cash' ? 'نقداً' : 'دين'}` 
       });
 
-      // 4. إنشاء فاتورة مبيعات
+      // 4. إنشاء فاتورة مبيعات (بدون ضريبة)
       const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(100000 + Math.random() * 900000)}`;
-      const taxAmount = totalAmount * 0.15;
-      const totalWithTax = totalAmount + taxAmount;
 
       const { data: invoiceData } = await supabase.from('invoices').insert({
         invoice_number: invoiceNumber,
@@ -319,8 +317,8 @@ const Tasks = () => {
         client_id: selectedTask.client_id,
         client_name: selectedTask.client_name,
         amount: totalAmount,
-        tax_amount: taxAmount,
-        total_amount: totalWithTax,
+        tax_amount: 0,
+        total_amount: totalAmount,
         status: paymentType === 'cash' ? 'paid' : 'pending',
         notes: `فاتورة تلقائية من مهمة: ${selectedTask.title}`,
         accountant_name: profile?.full_name || user?.email,

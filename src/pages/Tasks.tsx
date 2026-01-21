@@ -116,7 +116,7 @@ const Tasks = () => {
   const [formData, setFormData] = useState({ title: "", description: "", client_name: "", client_id: "", phone: "", due_date: "", priority: "medium" as Priority });
   
   // حالات نافذة الإنجاز
-  const [completeFormData, setCompleteFormData] = useState({ service_amount: "", government_fees: "" });
+  const [completeFormData, setCompleteFormData] = useState({ total_amount: "", government_fees: "" });
   
   // حالات البحث عن العميل وإضافته
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
@@ -260,20 +260,25 @@ const Tasks = () => {
   // فتح نافذة الإكمال
   const openCompleteDialog = (task: Task) => {
     setSelectedTask(task);
-    setCompleteFormData({ service_amount: "", government_fees: "" });
+    setCompleteFormData({ total_amount: "", government_fees: "" });
     setIsCompleteDialogOpen(true);
   };
 
   // إكمال المهمة مع الربط التلقائي
-  const handleCompleteTaskWithFinancials = async () => {
+  const handleCompleteTaskWithFinancials = async (paymentType: 'cash' | 'debt') => {
     if (!selectedTask) return;
     
-    const serviceAmount = parseFloat(completeFormData.service_amount) || 0;
+    const totalAmount = parseFloat(completeFormData.total_amount) || 0;
     const governmentFees = parseFloat(completeFormData.government_fees) || 0;
-    const totalAmount = serviceAmount + governmentFees;
+    const netProfit = totalAmount - governmentFees;
 
     if (totalAmount <= 0) {
-      toast.error("يرجى إدخال المبلغ");
+      toast.error("يرجى إدخال المبلغ الإجمالي");
+      return;
+    }
+
+    if (governmentFees > totalAmount) {
+      toast.error("الرسوم الحكومية لا يمكن أن تتجاوز المبلغ الإجمالي");
       return;
     }
 
@@ -290,29 +295,20 @@ const Tasks = () => {
         status: 'completed', 
         completed_at: new Date().toISOString(), 
         total_work_time: selectedTask.total_work_time + additionalTime,
-        service_amount: serviceAmount,
+        service_amount: netProfit,
         government_fees: governmentFees
       }).eq('id', selectedTask.id);
 
       // 3. تسجيل في سجل العمليات
-      await supabase.from('task_time_logs').insert({ task_id: selectedTask.id, action: 'completed', user_id: user?.id, user_name: profile?.full_name, notes: `المبلغ: ${totalAmount} ريال` });
+      await supabase.from('task_time_logs').insert({ 
+        task_id: selectedTask.id, 
+        action: 'completed', 
+        user_id: user?.id, 
+        user_name: profile?.full_name, 
+        notes: `المبلغ الإجمالي: ${totalAmount} ريال - الرسوم: ${governmentFees} ريال - صافي الربح: ${netProfit} ريال - طريقة السداد: ${paymentType === 'cash' ? 'نقداً' : 'دين'}` 
+      });
 
-      // 4. إنشاء دين جديد (إذا كان المستخدم admin)
-      if (isAdmin) {
-        await supabase.from('debts').insert({
-          client_name: selectedTask.client_name,
-          service_type: selectedTask.title,
-          amount: totalAmount,
-          paid_amount: 0,
-          work_completion_date: new Date().toISOString().split('T')[0],
-          expected_payment_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          notes: `مرتبط بمهمة: ${selectedTask.title}`,
-          created_by: user?.id,
-          task_id: selectedTask.id
-        });
-      }
-
-      // 5. إنشاء فاتورة مبيعات
+      // 4. إنشاء فاتورة مبيعات
       const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(100000 + Math.random() * 900000)}`;
       const taxAmount = totalAmount * 0.15;
       const totalWithTax = totalAmount + taxAmount;
@@ -325,23 +321,23 @@ const Tasks = () => {
         amount: totalAmount,
         tax_amount: taxAmount,
         total_amount: totalWithTax,
-        status: 'pending',
+        status: paymentType === 'cash' ? 'paid' : 'pending',
         notes: `فاتورة تلقائية من مهمة: ${selectedTask.title}`,
         accountant_name: profile?.full_name || user?.email,
         created_by: user?.id,
         task_id: selectedTask.id
       }).select().single();
 
-      // 6. إضافة بنود الفاتورة
+      // 5. إضافة بنود الفاتورة
       if (invoiceData) {
         const invoiceItems = [];
-        if (serviceAmount > 0) {
+        if (netProfit > 0) {
           invoiceItems.push({
             invoice_id: invoiceData.id,
-            description: selectedTask.title,
+            description: `أتعاب خدمة: ${selectedTask.title}`,
             quantity: 1,
-            unit_price: serviceAmount,
-            total: serviceAmount
+            unit_price: netProfit,
+            total: netProfit
           });
         }
         if (governmentFees > 0) {
@@ -358,7 +354,27 @@ const Tasks = () => {
         }
       }
 
-      toast.success("تم إكمال المهمة وإنشاء الفاتورة والدين تلقائياً");
+      // 6. إنشاء دين جديد فقط إذا كانت طريقة السداد "إضافة للديون" وكان المستخدم admin
+      if (paymentType === 'debt' && isAdmin && invoiceData) {
+        await supabase.from('debts').insert({
+          client_name: selectedTask.client_name,
+          service_type: selectedTask.title,
+          amount: totalAmount,
+          paid_amount: 0,
+          work_completion_date: new Date().toISOString().split('T')[0],
+          expected_payment_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          notes: `مرتبط بفاتورة: ${invoiceNumber}`,
+          created_by: user?.id,
+          task_id: selectedTask.id
+        });
+      }
+
+      if (paymentType === 'cash') {
+        toast.success("تم إكمال المهمة وإنشاء فاتورة مدفوعة");
+      } else {
+        toast.success("تم إكمال المهمة وإضافة المبلغ للديون");
+      }
+      
       setIsCompleteDialogOpen(false);
       fetchTasks();
     } catch (error) {
@@ -629,51 +645,84 @@ const Tasks = () => {
               <p className="text-sm text-muted-foreground">العميل: {selectedTask?.client_name}</p>
             </div>
             <div>
-              <Label>أتعاب الخدمة (ريال) *</Label>
+              <Label>المبلغ الإجمالي المطلوب من العميل (ريال) *</Label>
               <Input 
                 type="number" 
-                value={completeFormData.service_amount} 
-                onChange={(e) => setCompleteFormData(p => ({ ...p, service_amount: e.target.value }))} 
+                value={completeFormData.total_amount} 
+                onChange={(e) => setCompleteFormData(p => ({ ...p, total_amount: e.target.value }))} 
                 placeholder="0.00"
               />
+              <p className="text-xs text-muted-foreground mt-1">المبلغ الكلي الذي سيتم فوترته للعميل</p>
             </div>
             <div>
-              <Label>الرسوم الحكومية (ريال)</Label>
+              <Label>الرسوم الحكومية المدفوعة (ريال)</Label>
               <Input 
                 type="number" 
                 value={completeFormData.government_fees} 
                 onChange={(e) => setCompleteFormData(p => ({ ...p, government_fees: e.target.value }))} 
                 placeholder="0.00"
               />
+              <p className="text-xs text-muted-foreground mt-1">المبلغ الذي دفعه المكتب للجهات الحكومية</p>
             </div>
-            <Card>
+            <Card className="border-2 border-primary/20">
               <CardContent className="pt-4">
                 <div className="flex justify-between text-sm mb-2">
-                  <span>أتعاب الخدمة:</span>
-                  <span>{formatCurrency(parseFloat(completeFormData.service_amount) || 0)}</span>
+                  <span>المبلغ الإجمالي:</span>
+                  <span>{formatCurrency(parseFloat(completeFormData.total_amount) || 0)}</span>
                 </div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>الرسوم الحكومية:</span>
+                <div className="flex justify-between text-sm mb-2 text-muted-foreground">
+                  <span>(-) الرسوم الحكومية:</span>
                   <span>{formatCurrency(parseFloat(completeFormData.government_fees) || 0)}</span>
                 </div>
-                <div className="flex justify-between font-bold border-t pt-2">
-                  <span>الإجمالي:</span>
-                  <span>{formatCurrency((parseFloat(completeFormData.service_amount) || 0) + (parseFloat(completeFormData.government_fees) || 0))}</span>
+                <div className="flex justify-between font-bold border-t pt-2 text-green-600 dark:text-green-400">
+                  <span>= صافي ربح المكتب:</span>
+                  <span>{formatCurrency((parseFloat(completeFormData.total_amount) || 0) - (parseFloat(completeFormData.government_fees) || 0))}</span>
                 </div>
               </CardContent>
             </Card>
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm">
-              <p className="font-medium text-blue-700 dark:text-blue-300">عند التأكيد سيتم:</p>
-              <ul className="list-disc list-inside text-blue-600 dark:text-blue-400 mt-1 space-y-1">
-                <li>إغلاق المهمة كمكتملة</li>
-                <li>إنشاء فاتورة مبيعات تلقائياً</li>
-                {isAdmin && <li>ترحيل المبلغ كدين على العميل</li>}
-              </ul>
+            
+            <div className="space-y-3">
+              {/* خيار السداد النقدي */}
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <p className="font-medium text-green-700 dark:text-green-300 text-sm">تم السداد نقداً</p>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">سيتم إنشاء فاتورة مدفوعة • لن يُضاف للديون</p>
+                  </div>
+                  <Button 
+                    onClick={() => handleCompleteTaskWithFinancials('cash')} 
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                    disabled={!completeFormData.total_amount || parseFloat(completeFormData.total_amount) <= 0}
+                  >
+                    <CheckCircle2 className="w-4 h-4 ml-1" />
+                    تأكيد
+                  </Button>
+                </div>
+              </div>
+
+              {/* خيار إضافة للديون */}
+              {isAdmin && (
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <p className="font-medium text-orange-700 dark:text-orange-300 text-sm">إضافة للديون</p>
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">سيتم إنشاء فاتورة معلقة • وترحيل المبلغ للديون • عند السداد تتحول الفاتورة لمدفوعة تلقائياً</p>
+                    </div>
+                    <Button 
+                      onClick={() => handleCompleteTaskWithFinancials('debt')} 
+                      size="sm"
+                      variant="outline"
+                      className="border-orange-500 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30"
+                      disabled={!completeFormData.total_amount || parseFloat(completeFormData.total_amount) <= 0}
+                    >
+                      <Clock className="w-4 h-4 ml-1" />
+                      تأكيد
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-            <Button onClick={handleCompleteTaskWithFinancials} className="w-full">
-              <CheckCircle2 className="w-4 h-4 ml-2" />
-              تأكيد الإكمال وإنشاء الفاتورة
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

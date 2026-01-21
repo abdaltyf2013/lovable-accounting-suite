@@ -110,7 +110,7 @@ const Tasks = () => {
   const [taskNotes, setTaskNotes] = useState<TaskNote[]>([]);
   const [taskLogs, setTaskLogs] = useState<TaskTimeLog[]>([]);
   const [newNote, setNewNote] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("pending");
   const [sortBy, setSortBy] = useState<'priority' | 'date'>('priority');
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({ title: "", description: "", client_name: "", client_id: "", phone: "", due_date: "", priority: "medium" as Priority });

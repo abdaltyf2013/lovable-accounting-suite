@@ -26,6 +26,7 @@ interface Debt {
   notes: string | null;
   last_reminder_date: string | null;
   created_at: string;
+  task_id: string | null;
 }
 
 interface DebtNote {
@@ -234,9 +235,18 @@ export default function Debts() {
 
       if (error) throw error;
 
+      // تحويل الفاتورة المرتبطة إلى مدفوعة تلقائياً
+      if (payingDebt.task_id) {
+        await supabase
+          .from('invoices')
+          .update({ status: 'paid' })
+          .eq('task_id', payingDebt.task_id)
+          .eq('status', 'pending');
+      }
+
       toast({
         title: 'تم بنجاح',
-        description: 'تم تسجيل السداد الكلي'
+        description: 'تم تسجيل السداد الكلي وتحديث الفاتورة'
       });
       setIsPaymentDialogOpen(false);
       setPayingDebt(null);
@@ -279,10 +289,19 @@ export default function Debts() {
 
       if (error) throw error;
 
+      // تحويل الفاتورة المرتبطة إلى مدفوعة تلقائياً عند السداد الكامل
+      if (isFullyPaid && payingDebt.task_id) {
+        await supabase
+          .from('invoices')
+          .update({ status: 'paid' })
+          .eq('task_id', payingDebt.task_id)
+          .eq('status', 'pending');
+      }
+
       toast({
         title: 'تم بنجاح',
         description: isFullyPaid 
-          ? 'تم سداد المبلغ بالكامل' 
+          ? 'تم سداد المبلغ بالكامل وتحديث الفاتورة' 
           : `تم تسجيل سداد ${amount.toLocaleString()} ريال، المتبقي: ${remaining.toLocaleString()} ريال`
       });
       setIsPaymentDialogOpen(false);

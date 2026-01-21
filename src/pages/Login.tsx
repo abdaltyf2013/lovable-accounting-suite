@@ -65,34 +65,39 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
       <div className="w-full max-w-md animate-fade-in">
         {/* الشعار والعنوان */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
+            {/* شعار للوضع الفاتح */}
             <img 
-              src="/logo.png" 
+              src="/logo-light.png" 
               alt="إشعار - نظام محاسبي ذكي" 
-              className="h-24 w-auto object-contain"
+              className="h-32 w-auto object-contain dark:hidden"
+            />
+            {/* شعار للوضع الداكن */}
+            <img 
+              src="/logo-dark.png" 
+              alt="إشعار - نظام محاسبي ذكي" 
+              className="h-32 w-auto object-contain hidden dark:block"
             />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">إشعار</h1>
-          <p className="text-gray-600 text-lg">نظام محاسبي ذكي</p>
         </div>
 
         {/* بطاقة تسجيل الدخول */}
-        <Card className="shadow-2xl border-0 backdrop-blur-sm bg-white/90">
+        <Card className="shadow-2xl border-0 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-gray-100">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700">
               <TabsTrigger 
                 value="signin"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-cyan-500 data-[state=active]:text-white"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-cyan-500 data-[state=active]:text-white text-gray-700 dark:text-gray-300 font-semibold"
               >
                 تسجيل الدخول
               </TabsTrigger>
               <TabsTrigger 
                 value="signup"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-cyan-500 data-[state=active]:text-white"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-cyan-500 data-[state=active]:text-white text-gray-700 dark:text-gray-300 font-semibold"
               >
                 حساب جديد
               </TabsTrigger>
@@ -101,44 +106,44 @@ export default function Login() {
             {/* تبويب تسجيل الدخول */}
             <TabsContent value="signin">
               <CardHeader>
-                <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
-                <CardDescription className="text-base">أدخل بياناتك للوصول إلى حسابك</CardDescription>
+                <CardTitle className="text-2xl text-gray-900 dark:text-white">تسجيل الدخول</CardTitle>
+                <CardDescription className="text-base text-gray-600 dark:text-gray-400">أدخل بياناتك للوصول إلى حسابك</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSignIn} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email" className="text-base">البريد الإلكتروني</Label>
+                    <Label htmlFor="signin-email" className="text-base text-gray-900 dark:text-gray-100 font-medium">البريد الإلكتروني</Label>
                     <div className="relative">
-                      <Mail className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+                      <Mail className="absolute right-3 top-3 h-5 w-5 text-gray-500 dark:text-gray-400" />
                       <Input
                         id="signin-email"
                         type="email"
                         placeholder="example@email.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="pr-11 h-12 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="pr-11 h-12 text-base border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                         required
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password" className="text-base">كلمة المرور</Label>
+                    <Label htmlFor="signin-password" className="text-base text-gray-900 dark:text-gray-100 font-medium">كلمة المرور</Label>
                     <div className="relative">
-                      <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+                      <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-500 dark:text-gray-400" />
                       <Input
                         id="signin-password"
                         type="password"
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="pr-11 h-12 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="pr-11 h-12 text-base border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         required
                       />
                     </div>
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 transition-all duration-200 shadow-lg" 
+                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 transition-all duration-200 shadow-lg text-white" 
                     disabled={loading}
                   >
                     {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
@@ -150,52 +155,52 @@ export default function Login() {
             {/* تبويب إنشاء حساب */}
             <TabsContent value="signup">
               <CardHeader>
-                <CardTitle className="text-2xl">إنشاء حساب جديد</CardTitle>
-                <CardDescription className="text-base">أنشئ حساباً للوصول إلى النظام</CardDescription>
+                <CardTitle className="text-2xl text-gray-900 dark:text-white">إنشاء حساب جديد</CardTitle>
+                <CardDescription className="text-base text-gray-600 dark:text-gray-400">أنشئ حساباً للوصول إلى النظام</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSignUp} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name" className="text-base">الاسم الكامل</Label>
+                    <Label htmlFor="signup-name" className="text-base text-gray-900 dark:text-gray-100 font-medium">الاسم الكامل</Label>
                     <div className="relative">
-                      <User className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+                      <User className="absolute right-3 top-3 h-5 w-5 text-gray-500 dark:text-gray-400" />
                       <Input
                         id="signup-name"
                         type="text"
                         placeholder="أحمد محمد"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="pr-11 h-12 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="pr-11 h-12 text-base border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                         required
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email" className="text-base">البريد الإلكتروني</Label>
+                    <Label htmlFor="signup-email" className="text-base text-gray-900 dark:text-gray-100 font-medium">البريد الإلكتروني</Label>
                     <div className="relative">
-                      <Mail className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+                      <Mail className="absolute right-3 top-3 h-5 w-5 text-gray-500 dark:text-gray-400" />
                       <Input
                         id="signup-email"
                         type="email"
                         placeholder="example@email.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="pr-11 h-12 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="pr-11 h-12 text-base border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                         required
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password" className="text-base">كلمة المرور</Label>
+                    <Label htmlFor="signup-password" className="text-base text-gray-900 dark:text-gray-100 font-medium">كلمة المرور</Label>
                     <div className="relative">
-                      <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+                      <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-500 dark:text-gray-400" />
                       <Input
                         id="signup-password"
                         type="password"
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="pr-11 h-12 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="pr-11 h-12 text-base border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         minLength={6}
                         required
                       />
@@ -203,7 +208,7 @@ export default function Login() {
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 transition-all duration-200 shadow-lg" 
+                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 transition-all duration-200 shadow-lg text-white" 
                     disabled={loading}
                   >
                     {loading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب'}
@@ -216,7 +221,7 @@ export default function Login() {
 
         {/* تذييل */}
         <div className="text-center mt-6">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             جميع الحقوق محفوظة © 2026 إشعار
           </p>
         </div>

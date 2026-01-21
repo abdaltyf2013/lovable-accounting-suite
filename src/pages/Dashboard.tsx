@@ -319,7 +319,8 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from('tasks')
         .select('id, title, status, due_date, client_name')
-        .order('created_at', { ascending: false })
+        .not('status', 'in', '("completed","cancelled")')
+        .order('due_date', { ascending: true })
         .limit(6);
       
       if (error) throw error;
@@ -775,8 +776,19 @@ export default function Dashboard() {
                             {task.client_name}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {format(parseISO(task.due_date), 'yyyy/MM/dd')}
+                            <Clock className="w-3 h-3" />
+                            {(() => {
+                              const daysLeft = Math.ceil((new Date(task.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                              if (daysLeft < 0) {
+                                return <span className="text-red-600 font-semibold">متأخرة {Math.abs(daysLeft)} يوم</span>;
+                              } else if (daysLeft === 0) {
+                                return <span className="text-orange-600 font-semibold">اليوم</span>;
+                              } else if (daysLeft === 1) {
+                                return <span className="text-yellow-600 font-semibold">غداً</span>;
+                              } else {
+                                return <span className="font-medium">باقي {daysLeft} يوم</span>;
+                              }
+                            })()}
                           </span>
                         </div>
                       </div>

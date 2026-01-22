@@ -72,13 +72,13 @@ export default function Login() {
           <div className="flex justify-center mb-6">
             {/* شعار للوضع الفاتح */}
             <img 
-              src="/logo-light.png" 
+              src="./logo-light.png" 
               alt="إشعار - نظام محاسبي ذكي" 
               className="h-32 w-auto object-contain dark:hidden"
             />
             {/* شعار للوضع الداكن */}
             <img 
-              src="/logo-dark.png" 
+              src="./logo-dark.png" 
               alt="إشعار - نظام محاسبي ذكي" 
               className="h-32 w-auto object-contain hidden dark:block"
             />

@@ -384,36 +384,41 @@ export default function Dashboard() {
     try {
       if (!profile?.full_name) return;
 
+      const accountantName = profile.full_name;
       const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
       // المهام المنجزة
-      const { data: completed } = await supabase
+      const completedRes = await supabase
         .from('tasks')
         .select('id, started_at, completed_at')
-        .eq('accountant_name', profile.full_name)
+        .eq('started_by_name', accountantName)
         .eq('status', 'completed');
+      const completed = completedRes.data;
 
       // المهام الحالية
-      const { data: current } = await supabase
+      const currentRes = await supabase
         .from('tasks')
         .select('id')
-        .eq('accountant_name', profile.full_name)
-        .in('status', ['pending', 'in_progress']);
+        .eq('started_by_name', accountantName)
+        .or('status.eq.pending,status.eq.in_progress');
+      const current = currentRes.data;
 
       // المهام هذا الشهر
-      const { data: thisMonth } = await supabase
+      const thisMonthRes = await supabase
         .from('tasks')
         .select('id')
-        .eq('accountant_name', profile.full_name)
+        .eq('started_by_name', accountantName)
         .gte('created_at', firstDayOfMonth);
+      const thisMonth = thisMonthRes.data;
 
       // إجمالي الإيرادات
-      const { data: invoices } = await supabase
+      const invoicesRes = await supabase
         .from('invoices')
         .select('total_amount')
-        .eq('accountant_name', profile.full_name)
+        .eq('accountant_name', accountantName)
         .eq('type', 'sales')
         .neq('status', 'cancelled');
+      const invoices = invoicesRes.data;
 
       const totalRevenue = (invoices || []).reduce((sum, inv) => sum + Number(inv.total_amount), 0);
 
@@ -423,8 +428,8 @@ export default function Dashboard() {
         const validTasks = completed.filter(t => t.started_at && t.completed_at);
         if (validTasks.length > 0) {
           const totalTime = validTasks.reduce((sum, task) => {
-            const start = new Date(task.started_at).getTime();
-            const end = new Date(task.completed_at).getTime();
+            const start = new Date(task.started_at!).getTime();
+            const end = new Date(task.completed_at!).getTime();
             return sum + (end - start);
           }, 0);
           avgTime = Math.round(totalTime / validTasks.length / (1000 * 60 * 60)); // بالساعات

@@ -100,7 +100,7 @@ export default function ClientProfile() {
         .single();
 
       if (clientError) throw clientError;
-      setClient(clientData);
+      setClient(clientData as unknown as Client);
 
       // جلب المهام
       const { data: tasksData } = await supabase

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageCircle, 
@@ -10,14 +10,18 @@ import {
   Sparkles,
   Minimize2,
   Maximize2,
-  RefreshCw
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  ListTodo
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
   id: string;
@@ -25,6 +29,14 @@ interface Message {
   content: string;
   timestamp: Date;
   model?: string;
+  action?: ActionResult;
+}
+
+interface ActionResult {
+  type: 'invoice' | 'task' | 'debt' | 'client';
+  success: boolean;
+  message: string;
+  data?: any;
 }
 
 const suggestedQuestions = [
@@ -35,14 +47,133 @@ const suggestedQuestions = [
   "حلل لي إيرادات الشهر الماضي",
 ];
 
+const actionExamples = [
+  "أنشئ مهمة جديدة للعميل أحمد: تجديد السجل التجاري",
+  "أضف فاتورة بمبلغ 5000 ريال للعميل محمد",
+  "سجل دين جديد على العميل خالد بمبلغ 3000 ريال",
+];
+
+// Simple markdown renderer without external dependencies
+function SimpleMarkdown({ content }: { content: string }) {
+  const renderContent = (text: string) => {
+    // Split by code blocks first
+    const parts = text.split(/(```[\s\S]*?```)/g);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('```') && part.endsWith('```')) {
+        const code = part.slice(3, -3).replace(/^\w+\n/, '');
+        return (
+          <pre key={index} className="bg-muted/50 rounded-lg p-3 my-2 overflow-x-auto text-xs">
+            <code>{code}</code>
+          </pre>
+        );
+      }
+      
+      // Process inline markdown
+      return part.split('\n').map((line, lineIndex) => {
+        // Headers
+        if (line.startsWith('### ')) {
+          return <h3 key={`${index}-${lineIndex}`} className="font-bold text-base mt-3 mb-1">{line.slice(4)}</h3>;
+        }
+        if (line.startsWith('## ')) {
+          return <h2 key={`${index}-${lineIndex}`} className="font-bold text-lg mt-4 mb-2">{line.slice(3)}</h2>;
+        }
+        if (line.startsWith('# ')) {
+          return <h1 key={`${index}-${lineIndex}`} className="font-bold text-xl mt-4 mb-2">{line.slice(2)}</h1>;
+        }
+        
+        // List items
+        if (line.match(/^[-•*]\s/)) {
+          return (
+            <li key={`${index}-${lineIndex}`} className="mr-4 my-0.5">
+              {processInlineMarkdown(line.slice(2))}
+            </li>
+          );
+        }
+        
+        // Numbered list
+        if (line.match(/^\d+\.\s/)) {
+          return (
+            <li key={`${index}-${lineIndex}`} className="mr-4 my-0.5 list-decimal">
+              {processInlineMarkdown(line.replace(/^\d+\.\s/, ''))}
+            </li>
+          );
+        }
+        
+        // Empty line
+        if (!line.trim()) {
+          return <br key={`${index}-${lineIndex}`} />;
+        }
+        
+        // Regular paragraph
+        return (
+          <p key={`${index}-${lineIndex}`} className="my-1">
+            {processInlineMarkdown(line)}
+          </p>
+        );
+      });
+    });
+  };
+  
+  const processInlineMarkdown = (text: string) => {
+    // Bold
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Inline code
+    text = text.replace(/`(.*?)`/g, '<code class="bg-muted px-1 rounded text-xs">$1</code>');
+    
+    return <span dangerouslySetInnerHTML={{ __html: text }} />;
+  };
+  
+  return <div className="text-sm leading-relaxed">{renderContent(content)}</div>;
+}
+
+function ActionBadge({ action }: { action: ActionResult }) {
+  const icons = {
+    invoice: FileText,
+    task: ListTodo,
+    debt: AlertCircle,
+    client: User,
+  };
+  
+  const labels = {
+    invoice: 'فاتورة',
+    task: 'مهمة',
+    debt: 'دين',
+    client: 'عميل',
+  };
+  
+  const Icon = icons[action.type];
+  
+  return (
+    <div className={cn(
+      "flex items-center gap-2 p-2 rounded-lg mt-2 text-xs",
+      action.success 
+        ? "bg-green-500/10 text-green-600 dark:text-green-400" 
+        : "bg-red-500/10 text-red-600 dark:text-red-400"
+    )}>
+      {action.success ? (
+        <CheckCircle2 className="h-4 w-4" />
+      ) : (
+        <AlertCircle className="h-4 w-4" />
+      )}
+      <Icon className="h-3 w-3" />
+      <span>{labels[action.type]}: {action.message}</span>
+    </div>
+  );
+}
+
 export function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -75,6 +206,9 @@ export function AIChatWidget() {
         body: { 
           message: text,
           conversationHistory,
+          userId: user?.id,
+          userName: profile?.full_name || user?.email,
+          enableActions: true,
         },
       });
 
@@ -86,6 +220,7 @@ export function AIChatWidget() {
         content: data.response,
         timestamp: new Date(),
         model: data.model,
+        action: data.action,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -156,7 +291,7 @@ export function AIChatWidget() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">مساعد إشعار الذكي</h3>
-                  <p className="text-xs text-muted-foreground">مدعوم بـ Groq AI</p>
+                  <p className="text-xs text-muted-foreground">تحليل وتنفيذ إجراءات</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -165,6 +300,7 @@ export function AIChatWidget() {
                   size="icon"
                   onClick={clearChat}
                   className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  title="مسح المحادثة"
                 >
                   <RefreshCw className="h-4 w-4" />
                 </Button>
@@ -195,12 +331,41 @@ export function AIChatWidget() {
                     <Sparkles className="h-8 w-8 text-primary" />
                   </div>
                   <h4 className="font-semibold text-foreground mb-2">مرحباً! كيف يمكنني مساعدتك؟</h4>
-                  <p className="text-sm text-muted-foreground mb-6">
-                    أنا مساعدك الذكي لتحليل البيانات المحاسبية والمالية
+                  <p className="text-sm text-muted-foreground mb-4">
+                    يمكنني تحليل البيانات وتنفيذ الإجراءات
                   </p>
+                  
+                  {/* التبديل بين الأسئلة والإجراءات */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => setShowActions(false)}
+                      className={cn(
+                        "px-3 py-1.5 text-xs rounded-full transition-colors",
+                        !showActions 
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      )}
+                    >
+                      أسئلة وتحليلات
+                    </button>
+                    <button
+                      onClick={() => setShowActions(true)}
+                      className={cn(
+                        "px-3 py-1.5 text-xs rounded-full transition-colors",
+                        showActions 
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      )}
+                    >
+                      إجراءات سريعة
+                    </button>
+                  </div>
+                  
                   <div className="space-y-2 w-full">
-                    <p className="text-xs text-muted-foreground mb-2">جرب هذه الأسئلة:</p>
-                    {suggestedQuestions.map((question, index) => (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {showActions ? 'أمثلة على الإجراءات:' : 'جرب هذه الأسئلة:'}
+                    </p>
+                    {(showActions ? actionExamples : suggestedQuestions).map((question, index) => (
                       <button
                         key={index}
                         onClick={() => sendMessage(question)}
@@ -239,7 +404,8 @@ export function AIChatWidget() {
                       )}>
                         {message.role === 'assistant' ? (
                           <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                            <ReactMarkdown>{message.content}</ReactMarkdown>
+                            <SimpleMarkdown content={message.content} />
+                            {message.action && <ActionBadge action={message.action} />}
                           </div>
                         ) : (
                           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -264,7 +430,7 @@ export function AIChatWidget() {
                       <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          <span className="text-sm text-muted-foreground">جاري التحليل...</span>
+                          <span className="text-sm text-muted-foreground">جاري المعالجة...</span>
                         </div>
                       </div>
                     </motion.div>
@@ -281,7 +447,7 @@ export function AIChatWidget() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="اكتب سؤالك هنا..."
+                  placeholder="اكتب سؤالك أو الإجراء المطلوب..."
                   className="min-h-[44px] max-h-[120px] resize-none rounded-xl"
                   rows={1}
                 />
@@ -293,6 +459,9 @@ export function AIChatWidget() {
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
+              <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                يمكنني إنشاء مهام، فواتير، وتسجيل الديون
+              </p>
             </div>
           </motion.div>
         )}

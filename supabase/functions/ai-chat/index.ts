@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// System prompt للخبير المالي والمحاسبي
+// System prompt للخبير المالي والمحاسبي مع صلاحيات التنفيذ
 const SYSTEM_PROMPT = `أنت مساعد ذكي متخصص في المحاسبة والإدارة المالية لمكتب "إشعار" للخدمات المحاسبية في المملكة العربية السعودية.
 
 ## هويتك:
@@ -19,6 +19,63 @@ const SYSTEM_PROMPT = `أنت مساعد ذكي متخصص في المحاسبة
 - لديك وصول كامل للبيانات الحقيقية للنظام
 - يمكنك تحليل الفواتير والديون والعملاء والمهام
 - يمكنك إجراء العمليات الحسابية والتحليلية
+- **يمكنك تنفيذ إجراءات مثل: إنشاء مهام، إضافة فواتير، تسجيل ديون**
+
+## تنفيذ الإجراءات:
+عندما يطلب المستخدم إجراء معين، قم بتحليل الطلب واستخراج المعلومات ثم أعد الرد بصيغة JSON خاصة.
+
+### أنواع الإجراءات المدعومة:
+1. **إنشاء مهمة**: CREATE_TASK
+2. **إنشاء فاتورة**: CREATE_INVOICE  
+3. **تسجيل دين**: CREATE_DEBT
+
+### صيغة الإجراء:
+إذا اكتشفت أن المستخدم يريد تنفيذ إجراء، أضف في نهاية ردك:
+\`\`\`ACTION_JSON
+{
+  "action": "CREATE_TASK" | "CREATE_INVOICE" | "CREATE_DEBT",
+  "data": { ... بيانات الإجراء ... }
+}
+\`\`\`
+
+### أمثلة:
+
+**طلب: "أنشئ مهمة للعميل أحمد: تجديد السجل التجاري"**
+\`\`\`ACTION_JSON
+{
+  "action": "CREATE_TASK",
+  "data": {
+    "client_name": "أحمد",
+    "title": "تجديد السجل التجاري",
+    "priority": "medium"
+  }
+}
+\`\`\`
+
+**طلب: "سجل فاتورة بمبلغ 5000 ريال للعميل محمد عن خدمة إعداد القوائم المالية"**
+\`\`\`ACTION_JSON
+{
+  "action": "CREATE_INVOICE",
+  "data": {
+    "client_name": "محمد",
+    "amount": 5000,
+    "description": "إعداد القوائم المالية",
+    "type": "sales"
+  }
+}
+\`\`\`
+
+**طلب: "سجل دين على العميل خالد بمبلغ 3000 ريال"**
+\`\`\`ACTION_JSON
+{
+  "action": "CREATE_DEBT",
+  "data": {
+    "client_name": "خالد",
+    "amount": 3000,
+    "service_type": "خدمات محاسبية"
+  }
+}
+\`\`\`
 
 ## سلوكك:
 1. استخدم الأرقام والبيانات الحقيقية المرفقة في إجاباتك
@@ -27,17 +84,26 @@ const SYSTEM_PROMPT = `أنت مساعد ذكي متخصص في المحاسبة
 4. احسب المجاميع والنسب والمتوسطات عند الطلب
 5. حدد المخاطر المالية والفرص
 6. قارن بين الفترات الزمنية عند توفر البيانات
+7. **نفذ الإجراءات المطلوبة بدقة**
 
 ## تنسيق الإجابات:
 - استخدم العناوين والقوائم للتنظيم
 - اعرض الأرقام بتنسيق واضح (مثلاً: 15,000 ر.س)
 - قدم ملخصاً في البداية ثم التفاصيل
-- أضف توصيات عملية في النهاية`;
+- أضف توصيات عملية في النهاية
+- عند تنفيذ إجراء، أكد للمستخدم ما تم تنفيذه`;
 
 // تحديد نية المستخدم من السؤال
 function detectIntent(message: string): string[] {
   const intents: string[] = [];
   const lowerMessage = message.toLowerCase();
+  
+  // كلمات مفتاحية للإجراءات
+  if (/أنشئ|أضف|سجل|اعمل|create|add/.test(lowerMessage)) {
+    if (/مهم|task/.test(lowerMessage)) intents.push('action_task');
+    if (/فاتور|invoice/.test(lowerMessage)) intents.push('action_invoice');
+    if (/دين|debt/.test(lowerMessage)) intents.push('action_debt');
+  }
   
   // كلمات مفتاحية للفواتير
   if (/فاتور|فواتير|invoice|إيصال|مبيعات|إيرادات|دخل/.test(lowerMessage)) {
@@ -78,7 +144,7 @@ async function fetchContextData(supabase: any, intents: string[]) {
   
   try {
     // جلب بيانات الفواتير
-    if (intents.includes('invoices') || intents.includes('general')) {
+    if (intents.includes('invoices') || intents.includes('general') || intents.includes('action_invoice')) {
       const { data: invoices, error: invError } = await supabase
         .from('invoices')
         .select('*')
@@ -100,7 +166,8 @@ async function fetchContextData(supabase: any, intents: string[]) {
     }
     
     // جلب بيانات العملاء
-    if (intents.includes('clients') || intents.includes('general')) {
+    if (intents.includes('clients') || intents.includes('general') || 
+        intents.some(i => i.startsWith('action_'))) {
       const { data: clients, error: cliError } = await supabase
         .from('clients')
         .select('*')
@@ -116,7 +183,7 @@ async function fetchContextData(supabase: any, intents: string[]) {
     }
     
     // جلب بيانات الديون
-    if (intents.includes('debts') || intents.includes('general')) {
+    if (intents.includes('debts') || intents.includes('general') || intents.includes('action_debt')) {
       const { data: debts, error: debtError } = await supabase
         .from('debts')
         .select('*')
@@ -141,7 +208,7 @@ async function fetchContextData(supabase: any, intents: string[]) {
     }
     
     // جلب بيانات المهام
-    if (intents.includes('tasks') || intents.includes('general')) {
+    if (intents.includes('tasks') || intents.includes('general') || intents.includes('action_task')) {
       const { data: tasks, error: taskError } = await supabase
         .from('tasks')
         .select('*')
@@ -190,9 +257,9 @@ function buildContextMessage(context: any): string {
     contextMsg += `\n### العملاء:\n`;
     contextMsg += `- إجمالي العملاء: ${context.clients.total}\n`;
     if (context.clients.data.length > 0) {
-      contextMsg += `- أحدث العملاء:\n`;
-      context.clients.data.slice(0, 5).forEach((cli: any) => {
-        contextMsg += `  • ${cli.name}${cli.phone ? ` (${cli.phone})` : ''}\n`;
+      contextMsg += `- قائمة العملاء:\n`;
+      context.clients.data.slice(0, 10).forEach((cli: any) => {
+        contextMsg += `  • ${cli.name}${cli.phone ? ` (${cli.phone})` : ''} - ID: ${cli.id}\n`;
       });
     }
   }
@@ -229,6 +296,155 @@ function buildContextMessage(context: any): string {
   return contextMsg;
 }
 
+// استخراج وتنفيذ الإجراءات من رد الذكاء الاصطناعي
+async function extractAndExecuteAction(
+  response: string, 
+  supabase: any, 
+  userId: string | undefined,
+  context: any
+): Promise<{ cleanResponse: string; action?: any }> {
+  const actionMatch = response.match(/```ACTION_JSON\s*([\s\S]*?)\s*```/);
+  
+  if (!actionMatch) {
+    return { cleanResponse: response };
+  }
+  
+  try {
+    const actionData = JSON.parse(actionMatch[1]);
+    const cleanResponse = response.replace(/```ACTION_JSON[\s\S]*?```/, '').trim();
+    
+    let actionResult: any = null;
+    
+    // البحث عن العميل
+    const findClient = (clientName: string) => {
+      if (!context.clients?.data) return null;
+      return context.clients.data.find((c: any) => 
+        c.name.includes(clientName) || clientName.includes(c.name)
+      );
+    };
+    
+    switch (actionData.action) {
+      case 'CREATE_TASK': {
+        const client = findClient(actionData.data.client_name);
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 7);
+        
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert({
+            title: actionData.data.title,
+            client_name: actionData.data.client_name,
+            client_id: client?.id || null,
+            phone: client?.phone || null,
+            priority: actionData.data.priority || 'medium',
+            status: 'pending',
+            due_date: dueDate.toISOString().split('T')[0],
+            created_by: userId || null,
+          })
+          .select()
+          .single();
+        
+        actionResult = {
+          type: 'task',
+          success: !error,
+          message: error 
+            ? `فشل إنشاء المهمة: ${error.message}` 
+            : `تم إنشاء المهمة "${actionData.data.title}" للعميل ${actionData.data.client_name}`,
+          data: data
+        };
+        break;
+      }
+      
+      case 'CREATE_INVOICE': {
+        const client = findClient(actionData.data.client_name);
+        const amount = Number(actionData.data.amount) || 0;
+        const taxAmount = amount * 0.15;
+        const totalAmount = amount + taxAmount;
+        
+        // Generate invoice number
+        const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
+        
+        const { data: invoice, error: invError } = await supabase
+          .from('invoices')
+          .insert({
+            invoice_number: invoiceNumber,
+            client_name: actionData.data.client_name,
+            client_id: client?.id || null,
+            type: actionData.data.type || 'sales',
+            amount: amount,
+            tax_amount: taxAmount,
+            total_amount: totalAmount,
+            status: 'pending',
+            notes: actionData.data.description || null,
+            created_by: userId || null,
+          })
+          .select()
+          .single();
+        
+        if (!invError && invoice && actionData.data.description) {
+          // Add invoice item
+          await supabase
+            .from('invoice_items')
+            .insert({
+              invoice_id: invoice.id,
+              description: actionData.data.description,
+              quantity: 1,
+              unit_price: amount,
+              total: amount,
+            });
+        }
+        
+        actionResult = {
+          type: 'invoice',
+          success: !invError,
+          message: invError 
+            ? `فشل إنشاء الفاتورة: ${invError.message}` 
+            : `تم إنشاء الفاتورة رقم ${invoiceNumber} بمبلغ ${totalAmount.toLocaleString('ar-SA')} ر.س (شامل الضريبة)`,
+          data: invoice
+        };
+        break;
+      }
+      
+      case 'CREATE_DEBT': {
+        const client = findClient(actionData.data.client_name);
+        const today = new Date();
+        const expectedDate = new Date();
+        expectedDate.setDate(expectedDate.getDate() + 30);
+        
+        const { data, error } = await supabase
+          .from('debts')
+          .insert({
+            client_name: actionData.data.client_name,
+            amount: Number(actionData.data.amount) || 0,
+            paid_amount: 0,
+            service_type: actionData.data.service_type || 'خدمات محاسبية',
+            work_completion_date: today.toISOString().split('T')[0],
+            expected_payment_date: expectedDate.toISOString().split('T')[0],
+            status: 'pending',
+            created_by: userId || null,
+          })
+          .select()
+          .single();
+        
+        actionResult = {
+          type: 'debt',
+          success: !error,
+          message: error 
+            ? `فشل تسجيل الدين: ${error.message}` 
+            : `تم تسجيل دين بمبلغ ${Number(actionData.data.amount).toLocaleString('ar-SA')} ر.س على العميل ${actionData.data.client_name}`,
+          data: data
+        };
+        break;
+      }
+    }
+    
+    return { cleanResponse, action: actionResult };
+  } catch (error) {
+    console.error("Error executing action:", error);
+    return { cleanResponse: response };
+  }
+}
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === "OPTIONS") {
@@ -236,7 +452,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationHistory = [] } = await req.json();
+    const { message, conversationHistory = [], userId, userName, enableActions = false } = await req.json();
     
     if (!message) {
       return new Response(
@@ -266,11 +482,17 @@ serve(async (req) => {
     const contextData = await fetchContextData(supabase, intents);
     const contextMessage = buildContextMessage(contextData);
 
+    // إضافة معلومات المستخدم للسياق
+    let userContext = "";
+    if (userName) {
+      userContext = `\n\n## معلومات المستخدم الحالي:\n- الاسم: ${userName}\n`;
+    }
+
     // بناء الرسائل للـ AI
     const messages = [
       {
         role: "system",
-        content: SYSTEM_PROMPT + contextMessage
+        content: SYSTEM_PROMPT + contextMessage + userContext
       },
       ...conversationHistory.map((msg: any) => ({
         role: msg.role,
@@ -328,9 +550,31 @@ serve(async (req) => {
       }
 
       const fallbackData = await fallbackResponse.json();
+      const aiResponse = fallbackData.choices[0].message.content;
+      
+      // معالجة الإجراءات إذا كانت مفعلة
+      if (enableActions) {
+        const { cleanResponse, action } = await extractAndExecuteAction(
+          aiResponse, 
+          supabase, 
+          userId,
+          contextData
+        );
+        
+        return new Response(
+          JSON.stringify({
+            response: cleanResponse,
+            model: "llama-3.1-8b-instant (fallback)",
+            intents: intents,
+            action: action,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({
-          response: fallbackData.choices[0].message.content,
+          response: aiResponse,
           model: "llama-3.1-8b-instant (fallback)",
           intents: intents,
         }),
@@ -339,10 +583,32 @@ serve(async (req) => {
     }
 
     const data = await groqResponse.json();
+    const aiResponse = data.choices[0].message.content;
+    
+    // معالجة الإجراءات إذا كانت مفعلة
+    if (enableActions) {
+      const { cleanResponse, action } = await extractAndExecuteAction(
+        aiResponse, 
+        supabase, 
+        userId,
+        contextData
+      );
+      
+      return new Response(
+        JSON.stringify({
+          response: cleanResponse,
+          model: "llama-3.3-70b-versatile",
+          intents: intents,
+          usage: data.usage,
+          action: action,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     
     return new Response(
       JSON.stringify({
-        response: data.choices[0].message.content,
+        response: aiResponse,
         model: "llama-3.3-70b-versatile",
         intents: intents,
         usage: data.usage,

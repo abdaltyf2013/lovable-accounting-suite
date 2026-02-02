@@ -19,6 +19,7 @@ import Debts from "@/pages/Debts";
 import Tasks from "@/pages/Tasks";
 import ClientProfile from "@/pages/ClientProfile";
 import NotFound from "@/pages/NotFound";
+import { AIChatWidget } from "@/components/ai/AIChatWidget";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <AIChatWidget />
         </AuthProvider>
       </HashRouter>
     </TooltipProvider>

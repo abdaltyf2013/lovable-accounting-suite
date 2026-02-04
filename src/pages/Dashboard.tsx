@@ -66,6 +66,60 @@ interface AccountantStats {
   tasksThisMonth: number;
 }
 
+// مكون ترتيب المحاسبين (يعرض الترتيب فقط بدون المبالغ)
+function AccountantRankingCard({ topAccountants }: { topAccountants: TopAccountant[] }) {
+  return (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Award className="w-5 h-5 text-yellow-600" />
+          <span>ترتيب الموظفين 🏆</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        {topAccountants.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">لا توجد بيانات كافية</p>
+        ) : (
+          <div className="space-y-3">
+            {topAccountants.map((acc) => (
+              <div
+                key={acc.rank}
+                className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
+                  acc.rank === 1
+                    ? 'bg-gradient-to-r from-yellow-100 to-amber-100 dark:from-yellow-900/30 dark:to-amber-900/30 shadow-md'
+                    : acc.rank === 2
+                    ? 'bg-gradient-to-r from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-800'
+                    : 'bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30'
+                }`}
+              >
+                <div className="text-3xl">
+                  {acc.rank === 1 ? '🥇' : acc.rank === 2 ? '🥈' : '🥉'}
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-base">{acc.name}</p>
+                  {acc.rank === 1 && (
+                    <p className="text-xs text-yellow-700 dark:text-yellow-400 font-semibold mt-1">⭐ موظف الشهر</p>
+                  )}
+                </div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                  acc.rank === 1
+                    ? 'bg-yellow-500 text-white'
+                    : acc.rank === 2
+                    ? 'bg-gray-400 text-white'
+                    : 'bg-orange-400 text-white'
+                }`}>
+                  {acc.rank}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+
 export default function Dashboard() {
   const { profile, isAdmin } = useAuth();
   const [stats, setStats] = useState<Stats>({
@@ -100,12 +154,12 @@ export default function Dashboard() {
   useEffect(() => {
     fetchStats();
     fetchRecentInvoices();
+    fetchTopAccountants(); // للجميع: المدراء والمحاسبين
     if (isAdmin) {
       fetchOverdueTasks();
     }
     if (!isAdmin) {
       fetchAllTasks();
-      fetchTopAccountants();
       fetchAccountantStats();
     }
   }, [isAdmin, profile]);
@@ -732,6 +786,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* ترتيب المحاسبين - يظهر للمدراء أيضاً */}
+          <AccountantRankingCard topAccountants={topAccountants} />
         </>
       )}
 
@@ -806,53 +863,7 @@ export default function Dashboard() {
             </Card>
 
             {/* موظف الشهر Top 3 */}
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Award className="w-5 h-5 text-yellow-600" />
-                  <span>موظف الشهر 🏆</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {topAccountants.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">لا توجد بيانات كافية</p>
-                ) : (
-                  <div className="space-y-4">
-                    {topAccountants.map((acc) => (
-                      <div
-                        key={acc.rank}
-                        className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
-                          acc.rank === 1
-                            ? 'bg-gradient-to-r from-yellow-100 to-amber-100 dark:from-yellow-900/30 dark:to-amber-900/30 shadow-md scale-105'
-                            : acc.rank === 2
-                            ? 'bg-gradient-to-r from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-800'
-                            : 'bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30'
-                        }`}
-                      >
-                        <div className="text-4xl">
-                          {acc.rank === 1 ? '🥇' : acc.rank === 2 ? '🥈' : '🥉'}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-base">{acc.name}</p>
-                          {acc.rank === 1 && (
-                            <p className="text-xs text-yellow-700 dark:text-yellow-400 font-semibold mt-1">⭐ موظف الشهر</p>
-                          )}
-                        </div>
-                        <div className={`text-2xl font-bold ${
-                          acc.rank === 1
-                            ? 'text-yellow-600'
-                            : acc.rank === 2
-                            ? 'text-gray-600 dark:text-gray-400'
-                            : 'text-orange-600'
-                        }`}>
-                          #{acc.rank}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <AccountantRankingCard topAccountants={topAccountants} />
           </div>
 
           {/* إحصائيات المحاسب */}

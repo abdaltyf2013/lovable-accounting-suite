@@ -20,7 +20,8 @@ import {
   Wallet,
   ClipboardList,
   Sparkles,
-  ChevronLeft
+  ChevronLeft,
+  Calculator
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { title: 'المبيعات', href: '/sales', icon: FileText },
   { title: 'المصروفات', href: '/purchases', icon: ShoppingCart },
   { title: 'إدارة الديون', href: '/debts', icon: Wallet, adminOnly: true },
+  { title: 'محاسبة الشركاء', href: '/partnership', icon: Calculator, branchManagerOrAdmin: true },
   { title: 'المحاسبين', href: '/accountants', icon: UserCircle, branchManagerOrAdmin: true },
   { title: 'التقارير', href: '/reports', icon: BarChart3, branchManagerOrAdmin: true },
   { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, branchManagerOrAdmin: true },

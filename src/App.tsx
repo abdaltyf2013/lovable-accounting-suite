@@ -18,6 +18,7 @@ import Settings from "@/pages/Settings";
 import Debts from "@/pages/Debts";
 import Tasks from "@/pages/Tasks";
 import ClientProfile from "@/pages/ClientProfile";
+import Partnership from "@/pages/Partnership";
 import NotFound from "@/pages/NotFound";
 import { AIChatWidget } from "@/components/ai/AIChatWidget";
 
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/debts" element={<Debts />} />
               <Route path="/tasks" element={<Tasks />} />
+              <Route path="/partnership" element={<Partnership />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -21,6 +21,7 @@ import ClientProfile from "@/pages/ClientProfile";
 import Partnership from "@/pages/Partnership";
 import NotFound from "@/pages/NotFound";
 import { AIChatWidget } from "@/components/ai/AIChatWidget";
+ import Install from "@/pages/Install";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+             <Route path="/install" element={<Install />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route element={<MainLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />

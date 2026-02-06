@@ -48,9 +48,11 @@ export default defineConfig(({ mode }) => ({
            }
          ]
        },
-       workbox: {
-         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-         runtimeCaching: [
+      workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
+          globIgnores: ['**/logo.png', '**/logo-light_original.png', '**/logo-dark_original.png'],
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+          runtimeCaching: [
            {
              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
              handler: 'CacheFirst',

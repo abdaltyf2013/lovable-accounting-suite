@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import MainLayout from "@/components/layout/MainLayout";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
@@ -21,43 +22,49 @@ import ClientProfile from "@/pages/ClientProfile";
 import Partnership from "@/pages/Partnership";
 import NotFound from "@/pages/NotFound";
 import { AIChatWidget } from "@/components/ai/AIChatWidget";
- import Install from "@/pages/Install";
+import Install from "@/pages/Install";
+import { CommandPalette } from "@/components/ui/CommandPalette";
+import { ShortcutsHelp } from "@/components/ui/ShortcutsHelp";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <HashRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-             <Route path="/install" element={<Install />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route element={<MainLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/clients/:id" element={<ClientProfile />} />
-              <Route path="/sales" element={<Invoices type="sales" />} />
-              <Route path="/purchases" element={<Invoices type="purchase" />} />
-              <Route path="/accountants" element={<Accountants />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/ranking" element={<AccountantsRanking />} />
-              <Route path="/settlements" element={<SettlementsLog />} />
-              <Route path="/audit-log" element={<AuditLog />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/debts" element={<Debts />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/partnership" element={<Partnership />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <AIChatWidget />
-        </AuthProvider>
-      </HashRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <HashRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/install" element={<Install />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route element={<MainLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/clients" element={<Clients />} />
+                <Route path="/clients/:id" element={<ClientProfile />} />
+                <Route path="/sales" element={<Invoices type="sales" />} />
+                <Route path="/purchases" element={<Invoices type="purchase" />} />
+                <Route path="/accountants" element={<Accountants />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/ranking" element={<AccountantsRanking />} />
+                <Route path="/settlements" element={<SettlementsLog />} />
+                <Route path="/audit-log" element={<AuditLog />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/debts" element={<Debts />} />
+                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/partnership" element={<Partnership />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <AIChatWidget />
+            <CommandPalette />
+            <ShortcutsHelp />
+          </AuthProvider>
+        </HashRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

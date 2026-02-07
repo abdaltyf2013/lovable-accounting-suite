@@ -25,6 +25,7 @@ import { AIChatWidget } from "@/components/ai/AIChatWidget";
 import Install from "@/pages/Install";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { ShortcutsHelp } from "@/components/ui/ShortcutsHelp";
+import { SuperAdminDashboard } from "@/pages/admin";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/install" element={<Install />} />
+              <Route path="/admin/dashboard" element={<SuperAdminDashboard />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />

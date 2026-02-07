@@ -7,13 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Lock, Mail, User, Sparkles, Shield, BarChart3, Zap } from 'lucide-react';
+import { Lock, Mail, User, Sparkles, Shield, BarChart3, Zap, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, companyName);
     
     if (error) {
       toast({
@@ -227,7 +228,22 @@ export default function Login() {
                   <CardDescription>أنشئ حساباً للوصول إلى النظام</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSignUp} className="space-y-5">
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-company" className="text-sm font-medium">اسم الشركة</Label>
+                      <div className="relative">
+                        <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                          id="signup-company"
+                          type="text"
+                          placeholder="شركة النجاح للتجارة"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          className="pr-11 h-12 bg-background"
+                          required
+                        />
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-name" className="text-sm font-medium">الاسم الكامل</Label>
                       <div className="relative">

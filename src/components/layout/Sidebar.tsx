@@ -32,7 +32,8 @@ interface NavItem {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  adminOnly?: boolean;
+  superAdminOnly?: boolean;
+  tenantAdminOnly?: boolean;
   branchManagerOrAdmin?: boolean;
   accountantOnly?: boolean;
 }
@@ -43,19 +44,19 @@ const navItems: NavItem[] = [
   { title: 'العملاء', href: '/clients', icon: Users },
   { title: 'المبيعات', href: '/sales', icon: FileText },
   { title: 'المصروفات', href: '/purchases', icon: ShoppingCart },
-  { title: 'إدارة الديون', href: '/debts', icon: Wallet, adminOnly: true },
+  { title: 'إدارة الديون', href: '/debts', icon: Wallet, tenantAdminOnly: true },
   { title: 'محاسبة الشركاء', href: '/partnership', icon: Calculator, branchManagerOrAdmin: true },
   { title: 'المحاسبين', href: '/accountants', icon: UserCircle, branchManagerOrAdmin: true },
   { title: 'التقارير', href: '/reports', icon: BarChart3, branchManagerOrAdmin: true },
   { title: 'ترتيب المحاسبين', href: '/ranking', icon: Trophy, branchManagerOrAdmin: true },
   { title: 'سجل التصفيات', href: '/settlements', icon: History },
-  { title: 'سجل الرقابة', href: '/audit-log', icon: ShieldCheck, adminOnly: true },
-  { title: 'الإعدادات', href: '/settings', icon: Settings, adminOnly: true },
+  { title: 'سجل الرقابة', href: '/audit-log', icon: ShieldCheck, tenantAdminOnly: true },
+  { title: 'الإعدادات', href: '/settings', icon: Settings, tenantAdminOnly: true },
 ];
 
 export default function Sidebar() {
   const location = useLocation();
-  const { profile, signOut, isAdmin, isBranchManagerOrAdmin, userRole } = useAuth();
+  const { profile, signOut, isAdmin, isBranchManagerOrAdmin, userRole, isSuperAdmin, isTenantAdmin } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -77,19 +78,22 @@ export default function Sidebar() {
   };
 
   const filteredNavItems = navItems.filter(item => {
-    if (item.adminOnly) return isAdmin;
+    if (item.superAdminOnly) return isSuperAdmin;
+    if (item.tenantAdminOnly) return isTenantAdmin || isSuperAdmin;
     if (item.branchManagerOrAdmin) return isBranchManagerOrAdmin || isAdmin;
     return true;
   });
 
   const getRoleLabel = () => {
-    if (isAdmin) return 'مدير';
+    if (isSuperAdmin) return 'مدير عام';
+    if (isTenantAdmin) return 'مدير الشركة';
     if (userRole === 'branch_manager') return 'مدير فرع';
     return 'محاسب';
   };
 
   const getRoleBadgeColor = () => {
-    if (isAdmin) return 'bg-primary/20 text-primary';
+    if (isSuperAdmin) return 'bg-destructive/20 text-destructive';
+    if (isTenantAdmin) return 'bg-primary/20 text-primary';
     if (userRole === 'branch_manager') return 'bg-warning/20 text-warning';
     return 'bg-info/20 text-info';
   };
@@ -114,6 +118,25 @@ export default function Sidebar() {
           )}
         </div>
       </div>
+
+      {/* Super Admin Link */}
+      {isSuperAdmin && (
+        <div className="px-3 pb-2">
+          <Link
+            to="/admin/dashboard"
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-destructive/10 border border-destructive/20',
+              location.pathname === '/admin/dashboard'
+                ? 'bg-destructive text-destructive-foreground shadow-lg'
+                : 'text-destructive hover:bg-destructive/20'
+            )}
+          >
+            <ShieldCheck className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && <span>لوحة Super Admin</span>}
+          </Link>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
